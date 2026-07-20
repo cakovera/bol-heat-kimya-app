@@ -1265,39 +1265,6 @@ if material_spec_column:
             break
 
 with st.sidebar:
-    st.header("Column Settings")
-    bol_column = st.selectbox(
-        "BOL column",
-        columns,
-        index=columns.index(detected_bol) if detected_bol in columns else 0,
-    )
-    coil_column = st.selectbox(
-        "Coil column",
-        columns,
-        index=columns.index(detected_coil) if detected_coil in columns else 0,
-        help="For your files, this is usually the FULL_TAG_NUM column.",
-    )
-    heat_column = st.selectbox(
-        "Heat column",
-        columns,
-        index=columns.index(detected_heat) if detected_heat in columns else 0,
-    )
-    material_options = ["None"] + columns
-    material_spec_selection = st.selectbox(
-        "Material Spec column",
-        material_options,
-        index=material_options.index(material_spec_column) if material_spec_column in material_options else 0,
-        help="Select the column containing standard/grade information if it exists in the Excel file.",
-    )
-    element_columns = st.multiselect("Element columns", columns, default=detected_elements, key="element_columns_v2")
-    mechanical_columns = st.multiselect(
-        "Mechanical columns",
-        columns,
-        default=detected_mechanical,
-        key="mechanical_columns_with_charpy",
-    )
-    use_contains = st.checkbox("Search BOL by contains", value=False)
-
     st.header("Standard Check")
     enable_standard_check = st.checkbox("Run standard limit check", value=False)
     uploaded_rules = st.file_uploader("Standard limit file", type=["csv", "xlsx", "xls"])
@@ -1340,6 +1307,39 @@ with st.sidebar:
         grade_name = ""
     else:
         grade_name = selected_grade_option
+
+    st.header("Column Settings")
+    bol_column = st.selectbox(
+        "BOL column",
+        columns,
+        index=columns.index(detected_bol) if detected_bol in columns else 0,
+    )
+    coil_column = st.selectbox(
+        "Coil column",
+        columns,
+        index=columns.index(detected_coil) if detected_coil in columns else 0,
+        help="For your files, this is usually the FULL_TAG_NUM column.",
+    )
+    heat_column = st.selectbox(
+        "Heat column",
+        columns,
+        index=columns.index(detected_heat) if detected_heat in columns else 0,
+    )
+    material_options = ["None"] + columns
+    material_spec_selection = st.selectbox(
+        "Material Spec column",
+        material_options,
+        index=material_options.index(material_spec_column) if material_spec_column in material_options else 0,
+        help="Select the column containing standard/grade information if it exists in the Excel file.",
+    )
+    element_columns = st.multiselect("Element columns", columns, default=detected_elements, key="element_columns_v2")
+    mechanical_columns = st.multiselect(
+        "Mechanical columns",
+        columns,
+        default=detected_mechanical,
+        key="mechanical_columns_with_charpy",
+    )
+    use_contains = st.checkbox("Search BOL by contains", value=False)
 
     if is_pdf:
         with st.expander("Raw PDF text check"):
