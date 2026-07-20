@@ -214,7 +214,7 @@ def extract_pdf_content(uploaded_file) -> tuple[str, list[list[list[str]]]]:
             / "python.exe"
         )
         if not bundled_python.exists():
-            raise RuntimeError("PDF okumak icin pdfplumber bulunamadi. Terminalde: pip install -r requirements.txt")
+            raise RuntimeError("pdfplumber is not available for PDF reading. Run: pip install -r requirements.txt")
 
         script = (
             "import sys, json, pdfplumber\n"
@@ -240,7 +240,7 @@ def extract_pdf_content(uploaded_file) -> tuple[str, list[list[list[str]]]]:
             check=False,
         )
         if result.returncode != 0:
-            raise RuntimeError(result.stderr.strip() or "PDF metni okunamadi.")
+            raise RuntimeError(result.stderr.strip() or "PDF text could not be extracted.")
         payload = json.loads(result.stdout)
         return payload["text"], payload["tables"]
 
@@ -469,8 +469,8 @@ def build_heat_summary(
 ) -> pd.DataFrame:
     grouped = filtered.groupby(heat_column, dropna=False, sort=True)
     summary = grouped[chemistry_columns].agg(first_non_empty).reset_index()
-    summary.insert(1, "Coil Numaralari", grouped[coil_column].agg(distinct_join).values)
-    summary.insert(2, "Satir Sayisi", grouped.size().values)
+    summary.insert(1, "Coil Numbers", grouped[coil_column].agg(distinct_join).values)
+    summary.insert(2, "Row Count", grouped.size().values)
     return summary
 
 
@@ -484,7 +484,7 @@ def find_conflicts(filtered: pd.DataFrame, heat_column: str, chemistry_columns: 
                 if value not in distinct_values:
                     distinct_values.append(value)
             if len(distinct_values) > 1:
-                rows.append({"Heat": heat, "Kolon": column, "Farkli Degerler": " | ".join(distinct_values)})
+                rows.append({"Heat": heat, "Column": column, "Different Values": " | ".join(distinct_values)})
     return pd.DataFrame(rows)
 
 
@@ -568,7 +568,7 @@ def build_compliance_table(
             property_name = str(rule["Property"]).strip()
             value_column = resolve_property_column(list(heat_summary.columns), property_name)
             if value_column is None:
-                status = "KONTROL YOK"
+                status = "NO CHECK"
                 value = ""
             else:
                 value = heat_row[value_column]
@@ -576,22 +576,22 @@ def build_compliance_table(
                 min_value = parse_float(rule["Min"])
                 max_value = parse_float(rule["Max"])
                 if number is None:
-                    status = "DEGER YOK"
+                    status = "MISSING VALUE"
                 elif min_value is not None and number < min_value:
-                    status = "UYGUN DEGIL - MIN ALTI"
+                    status = "FAIL - BELOW MIN"
                 elif max_value is not None and number > max_value:
-                    status = "UYGUN DEGIL - MAX USTU"
+                    status = "FAIL - ABOVE MAX"
                 else:
-                    status = "UYGUN"
+                    status = "PASS"
 
             note = str(rule["Note"] or "")
-            if status == "KONTROL YOK":
-                note = (note + " | " if note else "") + f"Rapor kolonlarinda '{property_name}' veya esdeger kolon bulunamadi."
+            if status == "NO CHECK":
+                note = (note + " | " if note else "") + f"No report column found for '{property_name}' or an equivalent alias."
 
             rows.append(
                 {
                     "Heat No": heat_row[heat_column],
-                    "Coil / FULL_TAG_NUM": heat_row["Coil Numaralari"],
+                    "Coil / FULL_TAG_NUM": heat_row["Coil Numbers"],
                     "Standard": standard,
                     "Grade": grade,
                     "Property": property_name,
@@ -624,7 +624,7 @@ def make_excel_report(
         from openpyxl.utils import get_column_letter
 
         heat_column = heat_summary.columns[0]
-        base_columns = [heat_column, "Coil Numaralari", "Satir Sayisi"]
+        base_columns = [heat_column, "Coil Numbers", "Row Count"]
         element_columns = [column for column in element_summary.columns if column not in base_columns]
         mechanical_columns = [column for column in mechanical_summary.columns if column not in base_columns]
         report_columns = base_columns + element_columns + mechanical_columns
@@ -632,20 +632,20 @@ def make_excel_report(
         report_df = report_df.rename(
             columns={
                 heat_column: "Heat No",
-                "Coil Numaralari": "Coil / FULL_TAG_NUM",
-                "Satir Sayisi": "Satir Sayisi",
+                "Coil Numbers": "Coil / FULL_TAG_NUM",
+                "Row Count": "Row Count",
             }
         )
 
-        report_df.to_excel(writer, sheet_name="Rapor", startrow=3, index=False)
+        report_df.to_excel(writer, sheet_name="Report", startrow=3, index=False)
         if not compliance.empty:
-            compliance.to_excel(writer, sheet_name="Uygunluk Kontrol", index=False)
-        detail.to_excel(writer, sheet_name="Detay", index=False)
+            compliance.to_excel(writer, sheet_name="Compliance Check", index=False)
+        detail.to_excel(writer, sheet_name="Detail", index=False)
         if not conflicts.empty:
-            conflicts.to_excel(writer, sheet_name="Kontrol", index=False)
+            conflicts.to_excel(writer, sheet_name="Data Checks", index=False)
 
         workbook = writer.book
-        worksheet = workbook["Rapor"]
+        worksheet = workbook["Report"]
         max_col = len(report_df.columns)
         max_row = len(report_df) + 4
 
@@ -663,7 +663,7 @@ def make_excel_report(
 
         worksheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=max_col)
         title_cell = worksheet.cell(row=1, column=1)
-        title_cell.value = f"BOL {bol_number} - Heat / Coil Test Raporu"
+        title_cell.value = f"BOL {bol_number} - Heat / Coil Test Report"
         title_cell.fill = dark_fill
         title_cell.font = Font(color="FFFFFF", bold=True, size=16)
         title_cell.alignment = Alignment(horizontal="center", vertical="center")
@@ -672,8 +672,8 @@ def make_excel_report(
         worksheet.merge_cells(start_row=2, start_column=1, end_row=2, end_column=max_col)
         subtitle_cell = worksheet.cell(row=2, column=1)
         subtitle_cell.value = (
-            f"Kaynak: {source_name} | Sayfa: {sheet_name} | "
-            f"Olusturma: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+            f"Source: {source_name} | Sheet: {sheet_name} | "
+            f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
         )
         subtitle_cell.fill = light_fill
         subtitle_cell.font = Font(color="26354D", bold=True, size=10)
@@ -684,7 +684,7 @@ def make_excel_report(
             worksheet.cell(row=3, column=col).alignment = Alignment(horizontal="center", vertical="center")
 
         worksheet.merge_cells(start_row=3, start_column=1, end_row=3, end_column=3)
-        worksheet.cell(row=3, column=1).value = "Parca Bilgisi"
+        worksheet.cell(row=3, column=1).value = "Part Information"
         worksheet.cell(row=3, column=1).fill = blue_fill
         worksheet.cell(row=3, column=1).font = Font(color="FFFFFF", bold=True)
 
@@ -695,13 +695,13 @@ def make_excel_report(
 
         if element_columns:
             worksheet.merge_cells(start_row=3, start_column=element_start, end_row=3, end_column=element_end)
-            worksheet.cell(row=3, column=element_start).value = "Elementler"
+            worksheet.cell(row=3, column=element_start).value = "Elements"
             worksheet.cell(row=3, column=element_start).fill = teal_fill
             worksheet.cell(row=3, column=element_start).font = Font(color="FFFFFF", bold=True)
 
         if mechanical_columns:
             worksheet.merge_cells(start_row=3, start_column=mechanical_start, end_row=3, end_column=mechanical_end)
-            worksheet.cell(row=3, column=mechanical_start).value = "Mekanik Degerler"
+            worksheet.cell(row=3, column=mechanical_start).value = "Mechanical Properties"
             worksheet.cell(row=3, column=mechanical_start).fill = blue_fill
             worksheet.cell(row=3, column=mechanical_start).font = Font(color="FFFFFF", bold=True)
 
@@ -730,7 +730,7 @@ def make_excel_report(
         worksheet.column_dimensions["B"].width = 34
 
         for worksheet in workbook.worksheets:
-            if worksheet.title != "Rapor":
+            if worksheet.title != "Report":
                 worksheet.freeze_panes = "A2"
             for col_idx, column_cells in enumerate(worksheet.columns, start=1):
                 max_length = max(len(str(cell.value or "")) for cell in column_cells)
@@ -801,7 +801,7 @@ def make_compliance_pdf_report(
 
     failed = (
         compliance[
-            compliance["Status"].astype(str).str.contains("UYGUN DEGIL|DEGER YOK|KONTROL YOK", regex=True)
+            compliance["Status"].astype(str).str.contains("FAIL|MISSING VALUE|NO CHECK", regex=True)
         ].copy()
         if not compliance.empty
         else pd.DataFrame()
@@ -812,14 +812,14 @@ def make_compliance_pdf_report(
 
     source_files = [part.strip() for part in str(source_name or "").split(",") if part.strip()]
     if len(source_files) > 3:
-        source_display = f"{len(source_files)} PDF dosyasi: " + ", ".join(source_files[:3]) + " ..."
+        source_display = f"{len(source_files)} PDF files: " + ", ".join(source_files[:3]) + " ..."
     else:
         source_display = ", ".join(source_files) if source_files else "-"
 
-    story.append(Paragraph(f"BOL {escape(str(bol_number or 'PDF_BATCH'))} - Standart Uygunluk Raporu", title_style))
+    story.append(Paragraph(f"BOL {escape(str(bol_number or 'PDF_BATCH'))} - Standards Compliance Report", title_style))
 
     status_color = colors.HexColor("#DCFCE7") if failed.empty and not compliance.empty else colors.HexColor("#FEE2E2")
-    status_text = "TUM KONTROLLER UYGUN" if failed.empty and not compliance.empty else f"{len(failed)} UYGUNSUZ / KONTROL GEREKEN"
+    status_text = "ALL CHECKS PASSED" if failed.empty and not compliance.empty else f"{len(failed)} FAILED / NEEDS REVIEW"
     badge = Table([[Paragraph(status_text, small_bold_style)]], colWidths=[2.5 * inch])
     badge.setStyle(
         TableStyle(
@@ -837,13 +837,13 @@ def make_compliance_pdf_report(
     story.append(Spacer(1, 8))
 
     summary_rows = [
-        ["Kaynak", source_display],
+        ["Source", source_display],
         ["Standard", standard or "-"],
         ["Grade / Class", grade or "-"],
-        ["Heat Sayisi", str(heat_summary.iloc[:, 0].nunique() if not heat_summary.empty else 0)],
-        ["Kontrol Satiri", str(len(compliance))],
-        ["Uygunsuz / Kontrol Gereken", str(len(failed))],
-        ["Olusturma Zamani", datetime.now().strftime("%Y-%m-%d %H:%M")],
+        ["Heat Count", str(heat_summary.iloc[:, 0].nunique() if not heat_summary.empty else 0)],
+        ["Check Rows", str(len(compliance))],
+        ["Failed / Needs Review", str(len(failed))],
+        ["Generated At", datetime.now().strftime("%Y-%m-%d %H:%M")],
     ]
     summary_table = Table(
         [[as_paragraph(label, small_bold_style), as_paragraph(value, small_style)] for label, value in summary_rows],
@@ -867,9 +867,9 @@ def make_compliance_pdf_report(
     story.append(Spacer(1, 12))
 
     def status_fill(status: str):
-        if "UYGUN DEGIL" in status:
+        if "FAIL" in status:
             return colors.HexColor("#FEE2E2")
-        if "DEGER YOK" in status or "KONTROL YOK" in status:
+        if "MISSING VALUE" in status or "NO CHECK" in status:
             return colors.HexColor("#FEF3C7")
         return colors.HexColor("#DCFCE7")
 
@@ -888,10 +888,10 @@ def make_compliance_pdf_report(
         rename_map = {
             "Heat No": "Heat",
             "Coil / FULL_TAG_NUM": "Coil",
-            "Property": "Kontrol",
-            "Value": "Deger",
-            "Status": "Durum",
-            "Note": "Aciklama",
+            "Property": "Check",
+            "Value": "Value",
+            "Status": "Status",
+            "Note": "Note",
         }
         headers = [rename_map.get(column, column) for column in table_df.columns]
         data = [[as_paragraph(header, small_bold_style) for header in headers]]
@@ -938,11 +938,11 @@ def make_compliance_pdf_report(
         story.append(Spacer(1, 10))
 
     if compliance.empty:
-        story.append(Paragraph("Standart limit kontrolu icin sonuc bulunamadi. Kontrolu acip Standard/Grade alanlarini dogrulayin.", styles["Normal"]))
+        story.append(Paragraph("No standard compliance result was found. Enable the standard check and verify the Standard/Grade fields.", styles["Normal"]))
     else:
-        add_table("Uygunsuz veya Kontrol Gereken Degerler", failed)
+        add_table("Failed or Needs Review Values", failed)
         story.append(PageBreak())
-        add_table("Tum Standart Kontrol Sonuclari", compliance)
+        add_table("All Standard Check Results", compliance)
 
     doc.build(story)
     return output.getvalue()
@@ -970,7 +970,7 @@ def render_chemistry_cards(
 ) -> None:
     for _, row in summary.iterrows():
         heat_value = row[heat_column]
-        coil_values = row["Coil Numaralari"]
+        coil_values = row["Coil Numbers"]
         card_html = (
             '<section class="heat-card">'
             '<div class="heat-card-header">'
@@ -979,16 +979,16 @@ def render_chemistry_cards(
             '<div><div class="label">COIL / FULL_TAG_NUM</div>'
             f'<div class="coil-no">{escape(str(coil_values))}</div></div>'
             '</div>'
-            '<div class="group-title">Elementler</div>'
+            '<div class="group-title">Elements</div>'
             f'<div class="chem-strip">{render_value_strip(row, element_columns)}</div>'
-            '<div class="group-title">Mekanik Degerler</div>'
+            '<div class="group-title">Mechanical Properties</div>'
             f'<div class="chem-strip mechanical-strip">{render_value_strip(row, mechanical_columns)}</div>'
             '</section>'
         )
         st.markdown(card_html, unsafe_allow_html=True)
 
 
-st.set_page_config(page_title="BOL Heat Kimya Sorgu", page_icon="🔎", layout="wide")
+st.set_page_config(page_title="BOL Heat Chemistry Lookup", page_icon="🔎", layout="wide")
 
 st.markdown(
     """
@@ -1130,21 +1130,21 @@ st.markdown(
 st.markdown(
     """
     <div class="hero">
-        <h1>BOL Heat Kimya Sorgu</h1>
-        <p>Excel dosyasini yukleyin, BOL numarasini girin, coil ve heat bazinda kimyasal sonuclari rapor formatinda inceleyin.</p>
+        <h1>BOL Heat Chemistry Lookup</h1>
+        <p>Upload Excel or PDF files, enter a BOL number, and review chemistry, mechanical properties, and standard compliance by coil and heat.</p>
     </div>
     """,
     unsafe_allow_html=True,
 )
 
 uploaded_files = st.file_uploader(
-    "Excel veya PDF dosyasi",
+    "Excel or PDF files",
     type=["xlsx", "xls", "xlsm", "pdf"],
     accept_multiple_files=True,
 )
 
 if not uploaded_files:
-    st.info("Baslamak icin coil listesini iceren Excel dosyasini veya test sertifikasi PDF'ini yukleyin.")
+    st.info("Upload an Excel coil list or PDF test certificate to begin.")
     st.stop()
 
 pdf_files = [file for file in uploaded_files if file.name.lower().endswith(".pdf")]
@@ -1161,25 +1161,25 @@ if is_pdf:
     for pdf_file in pdf_files:
         try:
             parsed_df, parsed_text = pdf_to_dataframe(pdf_file)
-            parsed_df.insert(0, "Kaynak PDF", pdf_file.name)
+            parsed_df.insert(0, "Source PDF", pdf_file.name)
             pdf_frames.append(parsed_df)
             pdf_text_parts.append(f"--- {pdf_file.name} ---\n{parsed_text}")
         except Exception as exc:
             pdf_errors.append(f"{pdf_file.name}: {exc}")
 
     if pdf_errors:
-        st.error("Bazi PDF dosyalari okunamadi:\n" + "\n".join(pdf_errors))
+        st.error("Some PDF files could not be read:\n" + "\n".join(pdf_errors))
         st.stop()
 
     if not pdf_frames:
-        st.error("Okunabilir PDF bulunamadi.")
+        st.error("No readable PDF file was found.")
         st.stop()
 
     df = clean_dataframe(pd.concat(pdf_frames, ignore_index=True))
     pdf_text = "\n\n".join(pdf_text_parts)
 else:
     if pdf_files and excel_files:
-        st.error("PDF ve Excel dosyalarini ayni anda yuklemeyin. Ayni rapor icin tek dosya tipi secin.")
+        st.error("Do not upload PDF and Excel files at the same time. Choose one file type for a single report.")
         st.stop()
 
     if len(excel_files) == 1:
@@ -1187,15 +1187,15 @@ else:
         try:
             excel_file = pd.ExcelFile(uploaded_file)
         except Exception as exc:
-            st.error(f"Excel dosyasi okunamadi: {exc}")
+            st.error(f"Excel file could not be read: {exc}")
             st.stop()
 
-        sheet_name = st.selectbox("Sayfa", excel_file.sheet_names)
+        sheet_name = st.selectbox("Sheet", excel_file.sheet_names)
 
         try:
             df = clean_dataframe(pd.read_excel(excel_file, sheet_name=sheet_name))
         except Exception as exc:
-            st.error(f"Secilen sayfa okunamadi: {exc}")
+            st.error(f"The selected sheet could not be read: {exc}")
             st.stop()
     else:
         sheet_name = "Excel Batch"
@@ -1206,22 +1206,22 @@ else:
                 parsed_excel = pd.ExcelFile(excel_file_item)
                 first_sheet = parsed_excel.sheet_names[0]
                 parsed_df = clean_dataframe(pd.read_excel(parsed_excel, sheet_name=first_sheet))
-                parsed_df.insert(0, "Kaynak Excel", excel_file_item.name)
+                parsed_df.insert(0, "Source Excel", excel_file_item.name)
                 excel_frames.append(parsed_df)
             except Exception as exc:
                 excel_errors.append(f"{excel_file_item.name}: {exc}")
 
         if excel_errors:
-            st.error("Bazi Excel dosyalari okunamadi:\n" + "\n".join(excel_errors))
+            st.error("Some Excel files could not be read:\n" + "\n".join(excel_errors))
             st.stop()
         if not excel_frames:
-            st.error("Okunabilir Excel bulunamadi.")
+            st.error("No readable Excel file was found.")
             st.stop()
 
         df = clean_dataframe(pd.concat(excel_frames, ignore_index=True))
 
 if df.empty:
-    st.warning("Secilen sayfada okunabilir veri bulunamadi.")
+    st.warning("No readable data was found in the selected sheet.")
     st.stop()
 
 columns = list(df.columns)
@@ -1241,65 +1241,65 @@ if material_spec_column:
             break
 
 with st.sidebar:
-    st.header("Kolon Ayarlari")
+    st.header("Column Settings")
     bol_column = st.selectbox(
-        "BOL kolonu",
+        "BOL column",
         columns,
         index=columns.index(detected_bol) if detected_bol in columns else 0,
     )
     coil_column = st.selectbox(
-        "Coil kolonu",
+        "Coil column",
         columns,
         index=columns.index(detected_coil) if detected_coil in columns else 0,
-        help="Sizin dosyanizda bu kolon FULL_TAG_NUM olmali.",
+        help="For your files, this is usually the FULL_TAG_NUM column.",
     )
     heat_column = st.selectbox(
-        "Heat kolonu",
+        "Heat column",
         columns,
         index=columns.index(detected_heat) if detected_heat in columns else 0,
     )
-    material_options = ["Yok"] + columns
+    material_options = ["None"] + columns
     material_spec_selection = st.selectbox(
-        "Material Spec kolonu",
+        "Material Spec column",
         material_options,
         index=material_options.index(material_spec_column) if material_spec_column in material_options else 0,
-        help="Excel dosyasinda standart/grade bilgisi varsa buradan secin.",
+        help="Select the column containing standard/grade information if it exists in the Excel file.",
     )
-    element_columns = st.multiselect("Element kolonlari", columns, default=detected_elements, key="element_columns_v2")
+    element_columns = st.multiselect("Element columns", columns, default=detected_elements, key="element_columns_v2")
     mechanical_columns = st.multiselect(
-        "Mekanik kolonlar",
+        "Mechanical columns",
         columns,
         default=detected_mechanical,
         key="mechanical_columns_with_charpy",
     )
-    use_contains = st.checkbox("BOL icinde gecen degeri ara", value=False)
+    use_contains = st.checkbox("Search BOL by contains", value=False)
 
-    st.header("Standart Kontrol")
-    enable_standard_check = st.checkbox("Standart limit kontrolu yap", value=False)
-    standard_name = st.text_input("Standard", value=detected_standard, placeholder="Orn: ASTM A252")
-    grade_name = st.text_input("Grade / Class", value=detected_grade, placeholder="Orn: Grade 3")
-    uploaded_rules = st.file_uploader("Standart limit dosyasi", type=["csv", "xlsx", "xls"])
+    st.header("Standard Check")
+    enable_standard_check = st.checkbox("Run standard limit check", value=False)
+    standard_name = st.text_input("Standard", value=detected_standard, placeholder="Example: ASTM A252")
+    grade_name = st.text_input("Grade / Class", value=detected_grade, placeholder="Example: Grade 3")
+    uploaded_rules = st.file_uploader("Standard limit file", type=["csv", "xlsx", "xls"])
     standards_rules = load_rules_from_file(uploaded_rules)
     if standards_rules.empty:
-        st.caption("Limit dosyasi yoksa kontrol yapilmaz. Ornek dosya: standards_rules.csv")
+        st.caption("No limit file was found. Example file: standards_rules.csv")
     else:
-        st.caption(f"{len(standards_rules)} standart kural satiri yuklendi.")
+        st.caption(f"{len(standards_rules)} standard rule rows loaded.")
 
     if is_pdf:
-        with st.expander("PDF ham metin kontrol"):
-            st.text_area("PDF'den okunan metin", pdf_text[:5000], height=260)
+        with st.expander("Raw PDF text check"):
+            st.text_area("Extracted PDF text", pdf_text[:5000], height=260)
 
 bol_number = st.text_input(
-    "BOL numarasi",
-    placeholder="Bos birakirsan yuklenen tum satirlar/coiller listelenir",
+    "BOL number",
+    placeholder="Leave blank to list all uploaded rows/coils",
 )
 
-st.markdown('<div class="section-title">Dosya Onizleme</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">File Preview</div>', unsafe_allow_html=True)
 preview_metrics = st.columns(3)
-preview_metrics[0].markdown(f'<div class="metric-card"><span>Toplam satir</span><strong>{len(df)}</strong></div>', unsafe_allow_html=True)
-preview_metrics[1].markdown(f'<div class="metric-card"><span>Toplam kolon</span><strong>{len(df.columns)}</strong></div>', unsafe_allow_html=True)
+preview_metrics[0].markdown(f'<div class="metric-card"><span>Total rows</span><strong>{len(df)}</strong></div>', unsafe_allow_html=True)
+preview_metrics[1].markdown(f'<div class="metric-card"><span>Total columns</span><strong>{len(df.columns)}</strong></div>', unsafe_allow_html=True)
 preview_metrics[2].markdown(
-    f'<div class="metric-card"><span>Rapor kolonu</span><strong>{len(element_columns) + len(mechanical_columns)}</strong></div>',
+    f'<div class="metric-card"><span>Report columns</span><strong>{len(element_columns) + len(mechanical_columns)}</strong></div>',
     unsafe_allow_html=True,
 )
 st.dataframe(df.head(15), use_container_width=True, hide_index=True)
@@ -1307,7 +1307,7 @@ st.dataframe(df.head(15), use_container_width=True, hide_index=True)
 report_columns = element_columns + [column for column in mechanical_columns if column not in element_columns]
 
 if not element_columns:
-    st.warning("En az bir element kolonu secin.")
+    st.warning("Select at least one element column.")
     st.stop()
 
 if not bol_number:
@@ -1320,14 +1320,14 @@ if is_pdf and bol_number and filtered.empty:
     filtered[bol_column] = bol_number
 
 if filtered.empty:
-    st.error("Bu BOL numarasi icin satir bulunamadi. Kolon secimini veya arama tipini kontrol edin.")
+    st.error("No rows were found for this BOL number. Check the selected column or search mode.")
     st.stop()
 
 heat_summary = build_heat_summary(filtered, heat_column, coil_column, report_columns)
-element_summary = heat_summary[[heat_column, "Coil Numaralari", "Satir Sayisi"] + element_columns]
-mechanical_summary = heat_summary[[heat_column, "Coil Numaralari", "Satir Sayisi"] + mechanical_columns] if mechanical_columns else heat_summary[[heat_column, "Coil Numaralari", "Satir Sayisi"]]
+element_summary = heat_summary[[heat_column, "Coil Numbers", "Row Count"] + element_columns]
+mechanical_summary = heat_summary[[heat_column, "Coil Numbers", "Row Count"] + mechanical_columns] if mechanical_columns else heat_summary[[heat_column, "Coil Numbers", "Row Count"]]
 conflicts = find_conflicts(filtered, heat_column, report_columns)
-if material_spec_selection != "Yok" and not filtered[material_spec_selection].dropna().empty:
+if material_spec_selection != "None" and not filtered[material_spec_selection].dropna().empty:
     for material_value in filtered[material_spec_selection].dropna().astype(str).head(100):
         selected_standard, selected_grade = detect_standard_grade(material_value)
         if selected_standard:
@@ -1339,26 +1339,26 @@ compliance = (
     if enable_standard_check
     else pd.DataFrame()
 )
-failed_compliance = compliance[compliance["Status"].astype(str).str.contains("UYGUN DEGIL|DEGER YOK|KONTROL YOK", regex=True)] if not compliance.empty else pd.DataFrame()
+failed_compliance = compliance[compliance["Status"].astype(str).str.contains("FAIL|MISSING VALUE|NO CHECK", regex=True)] if not compliance.empty else pd.DataFrame()
 report_id = bol_number or "ALL"
 
-st.markdown('<div class="section-title">Sonuc Ozeti</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">Result Summary</div>', unsafe_allow_html=True)
 result_metrics = st.columns(4)
 result_metrics[0].markdown(f'<div class="metric-card"><span>BOL</span><strong>{report_id}</strong></div>', unsafe_allow_html=True)
-result_metrics[1].markdown(f'<div class="metric-card"><span>Bulunan satir</span><strong>{len(filtered)}</strong></div>', unsafe_allow_html=True)
+result_metrics[1].markdown(f'<div class="metric-card"><span>Matched rows</span><strong>{len(filtered)}</strong></div>', unsafe_allow_html=True)
 result_metrics[2].markdown(
-    f'<div class="metric-card"><span>Heat sayisi</span><strong>{filtered[heat_column].nunique(dropna=True)}</strong></div>',
+    f'<div class="metric-card"><span>Heat count</span><strong>{filtered[heat_column].nunique(dropna=True)}</strong></div>',
     unsafe_allow_html=True,
 )
 result_metrics[3].markdown(
-    f'<div class="metric-card"><span>Coil sayisi</span><strong>{filtered[coil_column].nunique(dropna=True)}</strong></div>',
+    f'<div class="metric-card"><span>Coil count</span><strong>{filtered[coil_column].nunique(dropna=True)}</strong></div>',
     unsafe_allow_html=True,
 )
 
-report_tab, table_tab, compliance_tab, detail_tab, control_tab = st.tabs(["Rapor Gorunumu", "Heat Tablosu", "Uygunluk Kontrol", "Detay Satirlari", "Kontrol"])
+report_tab, table_tab, compliance_tab, detail_tab, control_tab = st.tabs(["Report View", "Heat Table", "Compliance Check", "Detail Rows", "Data Checks"])
 
 with report_tab:
-    st.markdown('<div class="section-title">Heat Bazinda Element ve Mekanik Degerler</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Elements and Mechanical Properties by Heat</div>', unsafe_allow_html=True)
     render_chemistry_cards(heat_summary, heat_column, element_columns, mechanical_columns)
 
 with table_tab:
@@ -1366,14 +1366,14 @@ with table_tab:
 
 with compliance_tab:
     if not enable_standard_check:
-        st.info("Standart limit kontrolu kapali.")
+        st.info("Standard limit check is turned off.")
     elif compliance.empty:
-        st.warning("Bu standard/grade icin kural bulunamadi veya limit dosyasi bos.")
+        st.warning("No rules were found for this standard/grade, or the limit file is empty.")
     else:
         if failed_compliance.empty:
-            st.success("Kontrol edilen tum degerler limitlere uygun.")
+            st.success("All checked values are within limits.")
         else:
-            st.error(f"{len(failed_compliance)} uygunsuz/kontrol gerektiren satir bulundu.")
+            st.error(f"{len(failed_compliance)} failed or needs-review rows found.")
             st.dataframe(failed_compliance, use_container_width=True, hide_index=True)
         st.dataframe(compliance, use_container_width=True, hide_index=True)
 
@@ -1385,9 +1385,9 @@ with detail_tab:
 
 with control_tab:
     if conflicts.empty:
-        st.success("Ayni heat icinde farkli kimyasal deger uyarisi yok.")
+        st.success("No conflicting values were found within the same heat.")
     else:
-        st.warning("Ayni heat icinde farkli kimyasal degerler goruldu. Rapor hazirlarken kontrol edin.")
+        st.warning("Different values were found within the same heat. Review before reporting.")
         st.dataframe(conflicts, use_container_width=True, hide_index=True)
 
 report_bytes = make_excel_report(
@@ -1414,15 +1414,15 @@ pdf_report_bytes = make_compliance_pdf_report(
 download_cols = st.columns(2)
 with download_cols[0]:
     st.download_button(
-        "Excel raporu indir",
+        "Download Excel report",
         data=report_bytes,
-        file_name=f"BOL_{report_id}_heat_kimya_raporu.xlsx",
+        file_name=f"BOL_{report_id}_heat_chemistry_report.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 with download_cols[1]:
     st.download_button(
-        "PDF uygunluk raporu indir",
+        "Download PDF compliance report",
         data=pdf_report_bytes,
-        file_name=f"BOL_{report_id}_uygunluk_raporu.pdf",
+        file_name=f"BOL_{report_id}_compliance_report.pdf",
         mime="application/pdf",
     )

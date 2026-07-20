@@ -1,29 +1,30 @@
-# BOL Heat Kimya Sorgu
+# BOL Heat Chemistry Lookup
 
-Bu uygulama coil listesi Excel dosyasini veya test sertifikasi PDF'ini yukleyip girilen BOL numarasina ait heat numaralarini, kimyasal sonuclari ve mekanik degerleri listeler.
+This Streamlit app reads Excel coil lists and PDF mill test certificates, then reports heat-level chemistry, mechanical properties, and standards compliance.
 
-## Calistirma
+## Run Locally
 
-1. Bu klasorde `run_app.bat` dosyasina cift tiklayin.
-2. Tarayicida acilan ekranda Excel veya PDF dosyasini yukleyin.
-3. Sayfayi, BOL kolonunu, coil kolonunu, heat kolonunu ve kimyasal kolonlari kontrol edin.
-   - Coil kolonu sizin dosyanizda `FULL_TAG_NUM` olarak secilmelidir.
-4. BOL numarasini girin.
-5. Sonucu ekranda inceleyin veya `Excel raporu indir` butonu ile raporu alin.
-
-Komut satirindan calistirmak isterseniz:
+1. Double-click `run_app.bat`, or run the command below from this folder:
 
 ```powershell
 python -m streamlit run app.py
 ```
 
-## Notlar
+2. Upload one or more Excel or PDF files.
+3. Verify the column selections in the sidebar:
+   - BOL column
+   - Coil column
+   - Heat column
+   - Material Spec column
+   - Element columns
+   - Mechanical columns
+4. Enter a BOL number, or leave it blank to report all uploaded rows/coils.
+5. Download the Excel report or PDF compliance report.
 
-- Uygulama BOL, coil, heat ve kimyasal kolonlari otomatik tahmin eder, ama Excel formatiniz farkliysa sol panelden elle degistirebilirsiniz.
-- `FULL_TAG_NUM` coil numarasi olarak raporda heat numarasinin yaninda gosterilir.
-- PDF desteği metin tabanli PDF'ler icindir. Taranmis/resim PDF'lerde OCR gerekebilir.
-- Ayni heat icinde ayni kimyasal kolon icin farkli degerler varsa `Kontrol` uyarisi verir.
-- Indirilen raporda `Ozet`, `Heat Kimya`, `Detay` ve gerekiyorsa `Kontrol` sayfalari bulunur.
-- Standart kontrolu icin `standards_rules.csv` dosyasindaki `Min` ve `Max` kolonlarini kendi resmi/internal limitlerinize gore doldurun.
-- `Min` bos birakilirsa sadece maksimum, `Max` bos birakilirsa sadece minimum kontrol edilir. Ikisi de doluysa aralik kontrolu yapilir.
-- `PDF uygunluk raporu indir` butonu, standart kontrol sonucunu PDF olarak verir. Minimum alti, maksimum ustu, eksik deger ve kontrol bulunamayan satirlar raporda ayrica belirtilir.
+## Notes
+
+- `FULL_TAG_NUM` is treated as the coil number when available.
+- Text-based PDFs are supported. Scanned/image-only PDFs may require OCR.
+- Standard limits are stored in `standards_rules.csv`.
+- `Min` checks a lower limit, `Max` checks an upper limit, and both together check an acceptable range.
+- The PDF compliance report highlights failed, missing, and unchecked values.
