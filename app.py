@@ -531,6 +531,30 @@ def load_rules_from_file(uploaded_rules) -> pd.DataFrame:
     return rules[RULE_COLUMNS].copy()
 
 
+def sorted_rule_values(values: pd.Series) -> list[str]:
+    cleaned = [str(value).strip() for value in values.dropna().tolist() if str(value).strip()]
+    return sorted(set(cleaned), key=lambda value: [int(part) if part.isdigit() else part.lower() for part in re.split(r"(\d+)", value)])
+
+
+def standard_options_from_rules(rules: pd.DataFrame, detected_standard: str = "") -> list[str]:
+    options = sorted_rule_values(rules["Standard"]) if not rules.empty and "Standard" in rules.columns else []
+    if detected_standard and detected_standard not in options:
+        options.insert(0, detected_standard)
+    return options
+
+
+def grade_options_from_rules(rules: pd.DataFrame, standard: str, detected_grade: str = "") -> list[str]:
+    if rules.empty or "Standard" not in rules.columns or "Grade" not in rules.columns:
+        options = []
+    else:
+        standard_key = normalize_text(standard)
+        matched = rules[rules["Standard"].astype(str).map(normalize_text) == standard_key]
+        options = sorted_rule_values(matched["Grade"])
+    if detected_grade and detected_grade not in options:
+        options.insert(0, detected_grade)
+    return options
+
+
 def matching_rules(rules: pd.DataFrame, standard: str, grade: str) -> pd.DataFrame:
     if rules.empty:
         return rules
@@ -1276,14 +1300,46 @@ with st.sidebar:
 
     st.header("Standard Check")
     enable_standard_check = st.checkbox("Run standard limit check", value=False)
-    standard_name = st.text_input("Standard", value=detected_standard, placeholder="Example: ASTM A252")
-    grade_name = st.text_input("Grade / Class", value=detected_grade, placeholder="Example: Grade 3")
     uploaded_rules = st.file_uploader("Standard limit file", type=["csv", "xlsx", "xls"])
     standards_rules = load_rules_from_file(uploaded_rules)
     if standards_rules.empty:
         st.caption("No limit file was found. Example file: standards_rules.csv")
     else:
         st.caption(f"{len(standards_rules)} standard rule rows loaded.")
+
+    standard_options = standard_options_from_rules(standards_rules, detected_standard)
+    if standard_options:
+        st.caption("Available standards: " + ", ".join(standard_options))
+    standard_select_options = ["Select standard"] + standard_options + ["Custom"]
+    default_standard_index = standard_select_options.index(detected_standard) if detected_standard in standard_select_options else 0
+    selected_standard_option = st.selectbox(
+        "Standard",
+        standard_select_options,
+        index=default_standard_index,
+        help="Choose one of the ASTM standards loaded from the limit file.",
+    )
+    if selected_standard_option == "Custom":
+        standard_name = st.text_input("Custom standard", value=detected_standard, placeholder="Example: ASTM A252")
+    elif selected_standard_option == "Select standard":
+        standard_name = ""
+    else:
+        standard_name = selected_standard_option
+
+    grade_options = grade_options_from_rules(standards_rules, standard_name, detected_grade)
+    grade_select_options = ["Select grade / class"] + grade_options + ["Custom"]
+    default_grade_index = grade_select_options.index(detected_grade) if detected_grade in grade_select_options else 0
+    selected_grade_option = st.selectbox(
+        "Grade / Class",
+        grade_select_options,
+        index=default_grade_index,
+        help="Choose the grade, class, or type covered by the selected ASTM standard.",
+    )
+    if selected_grade_option == "Custom":
+        grade_name = st.text_input("Custom grade / class", value=detected_grade, placeholder="Example: Grade 3")
+    elif selected_grade_option == "Select grade / class":
+        grade_name = ""
+    else:
+        grade_name = selected_grade_option
 
     if is_pdf:
         with st.expander("Raw PDF text check"):
