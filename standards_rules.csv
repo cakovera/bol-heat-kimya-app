@@ -1,0 +1,331 @@
+Standard,Grade,Property,Min,Max,Unit,Note
+ASTM A252,Grade 1,Yield,30,,KSI,Table 1 yield point/yield strength minimum
+ASTM A252,Grade 1,Tensile,50,,KSI,Table 1 tensile strength minimum
+ASTM A252,Grade 1,Elongation,30,,%,Table 1 elongation in 2 in minimum
+ASTM A252,Grade 2,Yield,35,,KSI,Table 1 yield point/yield strength minimum
+ASTM A252,Grade 2,Tensile,60,,KSI,Table 1 tensile strength minimum
+ASTM A252,Grade 2,Elongation,25,,%,Table 1 elongation in 2 in minimum
+ASTM A252,Grade 3,Yield,45,,KSI,Table 1 yield point/yield strength minimum
+ASTM A252,Grade 3,Tensile,66,,KSI,Table 1 tensile strength minimum
+ASTM A252,Grade 3,Elongation,20,,%,Table 1 elongation in 2 in minimum
+ASTM A572,Grade 42,C,,0.21,%,Table 2 heat analysis maximum
+ASTM A572,Grade 42,Mn,,1.35,%,Table 2 heat analysis maximum; manganese minimum may apply by product/thickness
+ASTM A572,Grade 42,P,,0.030,%,Table 2 heat analysis maximum; exceptions in footnote I may apply
+ASTM A572,Grade 42,S,,0.030,%,Table 2 heat analysis maximum; exceptions in footnote I may apply
+ASTM A572,Grade 42,Si,,0.40,%,Table 2 heat analysis maximum; thicker plate range may require 0.15 min
+ASTM A572,Grade 42,Yield,42,,KSI,Table 4 yield point minimum
+ASTM A572,Grade 42,Tensile,60,,KSI,Table 4 tensile strength minimum
+ASTM A572,Grade 42,Elongation,24,,%,Table 4 elongation in 2 in minimum; width adjustment may apply
+ASTM A572,Grade 50,C,,0.23,%,Table 2 heat analysis maximum
+ASTM A572,Grade 50,Mn,,1.35,%,Table 2 heat analysis maximum; manganese minimum may apply by product/thickness
+ASTM A572,Grade 50,P,,0.030,%,Table 2 heat analysis maximum; exceptions in footnote I may apply
+ASTM A572,Grade 50,S,,0.030,%,Table 2 heat analysis maximum; exceptions in footnote I may apply
+ASTM A572,Grade 50,Si,,0.40,%,Table 2 heat analysis maximum; thicker plate range may require 0.15 min
+ASTM A572,Grade 50,Yield,50,,KSI,Table 4 yield point minimum
+ASTM A572,Grade 50,Tensile,65,,KSI,Table 4 tensile strength minimum
+ASTM A572,Grade 50,Elongation,21,,%,Table 4 elongation in 2 in minimum; width adjustment may apply
+ASTM A572,Grade 55,C,,0.25,%,Table 2 heat analysis maximum
+ASTM A572,Grade 55,Mn,,1.35,%,Table 2 heat analysis maximum; manganese minimum may apply by product/thickness
+ASTM A572,Grade 55,P,,0.030,%,Table 2 heat analysis maximum; exceptions in footnote I may apply
+ASTM A572,Grade 55,S,,0.030,%,Table 2 heat analysis maximum; exceptions in footnote I may apply
+ASTM A572,Grade 55,Si,,0.40,%,Table 2 heat analysis maximum; thicker plate range may require 0.15 min
+ASTM A572,Grade 55,Yield,55,,KSI,Table 4 yield point minimum
+ASTM A572,Grade 55,Tensile,70,,KSI,Table 4 tensile strength minimum
+ASTM A572,Grade 55,Elongation,20,,%,Table 4 elongation in 2 in minimum; width adjustment may apply
+ASTM A572,Grade 60,C,,0.26,%,Table 2 heat analysis maximum
+ASTM A572,Grade 60,Mn,,1.35,%,Table 2 heat analysis maximum; manganese minimum may apply by product/thickness
+ASTM A572,Grade 60,P,,0.030,%,Table 2 heat analysis maximum; exceptions in footnote I may apply
+ASTM A572,Grade 60,S,,0.030,%,Table 2 heat analysis maximum; exceptions in footnote I may apply
+ASTM A572,Grade 60,Si,,0.40,%,Table 2 heat analysis maximum; thicker plate range may require 0.15 min
+ASTM A572,Grade 60,Yield,60,,KSI,Table 4 yield point minimum
+ASTM A572,Grade 60,Tensile,75,,KSI,Table 4 tensile strength minimum
+ASTM A572,Grade 60,Elongation,18,,%,Table 4 elongation in 2 in minimum; width adjustment may apply
+ASTM A572,Grade 65,C,,0.23,%,Table 2 heat analysis maximum for >1/2 to 2 in condition; alternate small-size condition differs
+ASTM A572,Grade 65,Mn,,1.65,%,Table 2 heat analysis maximum for >1/2 to 2 in condition; alternate small-size condition differs
+ASTM A572,Grade 65,P,,0.030,%,Table 2 heat analysis maximum; exceptions in footnote I may apply
+ASTM A572,Grade 65,S,,0.030,%,Table 2 heat analysis maximum; exceptions in footnote I may apply
+ASTM A572,Grade 65,Si,,0.40,%,Table 2 heat analysis maximum where described
+ASTM A572,Grade 65,Yield,65,,KSI,Table 4 yield point minimum
+ASTM A572,Grade 65,Tensile,80,,KSI,Table 4 tensile strength minimum
+ASTM A572,Grade 65,Elongation,17,,%,Table 4 elongation in 2 in minimum; width adjustment may apply
+ASTM A1018,Grade 30,C,,0.25,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 30,Mn,,1.50,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 30,P,,0.035,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 30,S,,0.04,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 30,V,,0.008,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 30,Nb,,0.008,%,Table 3 SS heat analysis maximum; Cb/Nb treated as Nb
+ASTM A1018,Grade 30,Ti,,0.025,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 30,N,,0.014,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 30,Yield,30,,KSI,Table 5 yield strength minimum
+ASTM A1018,Grade 30,Tensile,49,,KSI,Table 5 tensile strength minimum
+ASTM A1018,Grade 30,Elongation,22,,%,Table 5 elongation in 2 in minimum
+ASTM A1018,Grade 33,C,,0.25,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 33,Mn,,1.50,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 33,P,,0.035,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 33,S,,0.04,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 33,V,,0.008,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 33,Nb,,0.008,%,Table 3 SS heat analysis maximum; Cb/Nb treated as Nb
+ASTM A1018,Grade 33,Ti,,0.025,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 33,N,,0.014,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 33,Yield,33,,KSI,Table 5 yield strength minimum
+ASTM A1018,Grade 33,Tensile,52,,KSI,Table 5 tensile strength minimum
+ASTM A1018,Grade 33,Elongation,22,,%,Table 5 elongation in 2 in minimum
+ASTM A1018,Grade 36 Type 1,C,,0.25,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 36 Type 1,Mn,,1.50,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 36 Type 1,P,,0.035,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 36 Type 1,S,,0.04,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 36 Type 1,V,,0.008,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 36 Type 1,Nb,,0.008,%,Table 3 SS heat analysis maximum; Cb/Nb treated as Nb
+ASTM A1018,Grade 36 Type 1,Ti,,0.025,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 36 Type 1,N,,0.014,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 36 Type 1,Yield,36,,KSI,Table 5 yield strength minimum
+ASTM A1018,Grade 36 Type 1,Tensile,53,,KSI,Table 5 tensile strength minimum
+ASTM A1018,Grade 36 Type 1,Elongation,21,,%,Table 5 elongation in 2 in minimum
+ASTM A1018,Grade 36 Type 2,C,,0.25,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 36 Type 2,P,,0.035,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 36 Type 2,S,,0.04,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 36 Type 2,V,,0.008,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 36 Type 2,Nb,,0.008,%,Table 3 SS heat analysis maximum; Cb/Nb treated as Nb
+ASTM A1018,Grade 36 Type 2,Ti,,0.025,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 36 Type 2,N,,0.014,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 36 Type 2,Yield,36,,KSI,Table 5 yield strength minimum
+ASTM A1018,Grade 36 Type 2,Tensile,58,80,KSI,Table 5 tensile strength range
+ASTM A1018,Grade 36 Type 2,Elongation,21,,%,Table 5 elongation in 2 in minimum
+ASTM A1018,Grade 40,C,,0.25,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 40,Mn,,1.50,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 40,P,,0.035,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 40,S,,0.04,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 40,V,,0.008,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 40,Nb,,0.008,%,Table 3 SS heat analysis maximum; Cb/Nb treated as Nb
+ASTM A1018,Grade 40,Ti,,0.025,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 40,N,,0.014,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 40,Yield,40,,KSI,Table 5 yield strength minimum
+ASTM A1018,Grade 40,Tensile,55,,KSI,Table 5 tensile strength minimum
+ASTM A1018,Grade 40,Elongation,19,,%,Table 5 elongation in 2 in minimum
+ASTM A1018,Grade 45,C,,0.25,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 45,Mn,,1.50,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 45,P,,0.035,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 45,S,,0.04,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 45,V,,0.008,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 45,Nb,,0.008,%,Table 3 SS heat analysis maximum; Cb/Nb treated as Nb
+ASTM A1018,Grade 45,Ti,,0.025,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 45,N,,0.014,%,Table 3 SS heat analysis maximum
+ASTM A1018,Grade 45,Yield,45,,KSI,Table 5 yield strength minimum
+ASTM A1018,Grade 45,Tensile,60,,KSI,Table 5 tensile strength minimum
+ASTM A1018,Grade 45,Elongation,18,,%,Table 5 elongation in 2 in minimum
+ASTM A1018,Grade 45 Class 1,C,,0.22,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 45 Class 1,Mn,,1.50,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 45 Class 1,P,,0.04,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 45 Class 1,S,,0.04,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 45 Class 1,V,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 45 Class 1,Nb,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements; Cb/Nb treated as Nb
+ASTM A1018,Grade 45 Class 1,Ti,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 45 Class 1,Yield,45,,KSI,Table 5 yield strength minimum
+ASTM A1018,Grade 45 Class 1,Tensile,60,,KSI,Table 5 tensile strength minimum
+ASTM A1018,Grade 45 Class 1,Elongation,22,,%,Table 5 elongation in 2 in minimum
+ASTM A1018,Grade 45 Class 2,C,,0.15,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 45 Class 2,Mn,,1.50,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 45 Class 2,P,,0.04,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 45 Class 2,S,,0.04,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 45 Class 2,V,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 45 Class 2,Nb,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements; Cb/Nb treated as Nb
+ASTM A1018,Grade 45 Class 2,Ti,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 45 Class 2,Yield,45,,KSI,Table 5 yield strength minimum
+ASTM A1018,Grade 45 Class 2,Tensile,55,,KSI,Table 5 tensile strength minimum
+ASTM A1018,Grade 45 Class 2,Elongation,22,,%,Table 5 elongation in 2 in minimum
+ASTM A1018,Grade 50 Class 1,C,,0.23,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 50 Class 1,Mn,,1.50,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 50 Class 1,P,,0.04,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 50 Class 1,S,,0.04,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 50 Class 1,V,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 50 Class 1,Nb,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements; Cb/Nb treated as Nb
+ASTM A1018,Grade 50 Class 1,Ti,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 50 Class 1,Yield,50,,KSI,Table 5 yield strength minimum
+ASTM A1018,Grade 50 Class 1,Tensile,65,,KSI,Table 5 tensile strength minimum
+ASTM A1018,Grade 50 Class 1,Elongation,20,,%,Table 5 elongation in 2 in minimum
+ASTM A1018,Grade 50 Class 2,C,,0.15,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 50 Class 2,Mn,,1.50,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 50 Class 2,P,,0.04,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 50 Class 2,S,,0.04,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 50 Class 2,V,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 50 Class 2,Nb,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements; Cb/Nb treated as Nb
+ASTM A1018,Grade 50 Class 2,Ti,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 50 Class 2,Yield,50,,KSI,Table 5 yield strength minimum
+ASTM A1018,Grade 50 Class 2,Tensile,60,,KSI,Table 5 tensile strength minimum
+ASTM A1018,Grade 50 Class 2,Elongation,20,,%,Table 5 elongation in 2 in minimum
+ASTM A1018,Grade 55 Class 1,C,,0.25,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 55 Class 1,Mn,,1.50,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 55 Class 1,P,,0.04,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 55 Class 1,S,,0.04,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 55 Class 1,V,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 55 Class 1,Nb,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements; Cb/Nb treated as Nb
+ASTM A1018,Grade 55 Class 1,Ti,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 55 Class 1,Yield,55,,KSI,Table 5 yield strength minimum
+ASTM A1018,Grade 55 Class 1,Tensile,70,,KSI,Table 5 tensile strength minimum
+ASTM A1018,Grade 55 Class 1,Elongation,18,,%,Table 5 elongation in 2 in minimum
+ASTM A1018,Grade 55 Class 2,C,,0.15,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 55 Class 2,Mn,,1.50,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 55 Class 2,P,,0.04,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 55 Class 2,S,,0.04,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 55 Class 2,V,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 55 Class 2,Nb,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements; Cb/Nb treated as Nb
+ASTM A1018,Grade 55 Class 2,Ti,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 55 Class 2,Yield,55,,KSI,Table 5 yield strength minimum
+ASTM A1018,Grade 55 Class 2,Tensile,65,,KSI,Table 5 tensile strength minimum
+ASTM A1018,Grade 55 Class 2,Elongation,18,,%,Table 5 elongation in 2 in minimum
+ASTM A1018,Grade 60 Class 1,C,,0.26,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 60 Class 1,Mn,,1.50,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 60 Class 1,P,,0.04,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 60 Class 1,S,,0.04,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 60 Class 1,V,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 60 Class 1,Nb,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements; Cb/Nb treated as Nb
+ASTM A1018,Grade 60 Class 1,Ti,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 60 Class 1,Yield,60,,KSI,Table 5 yield strength minimum
+ASTM A1018,Grade 60 Class 1,Tensile,75,,KSI,Table 5 tensile strength minimum
+ASTM A1018,Grade 60 Class 1,Elongation,16,,%,Table 5 elongation in 2 in minimum
+ASTM A1018,Grade 60 Class 2,C,,0.15,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 60 Class 2,Mn,,1.50,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 60 Class 2,P,,0.04,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 60 Class 2,S,,0.04,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 60 Class 2,V,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 60 Class 2,Nb,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements; Cb/Nb treated as Nb
+ASTM A1018,Grade 60 Class 2,Ti,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 60 Class 2,Yield,60,,KSI,Table 5 yield strength minimum
+ASTM A1018,Grade 60 Class 2,Tensile,70,,KSI,Table 5 tensile strength minimum
+ASTM A1018,Grade 60 Class 2,Elongation,16,,%,Table 5 elongation in 2 in minimum
+ASTM A1018,Grade 65 Class 1,C,,0.26,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 65 Class 1,Mn,,1.50,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 65 Class 1,P,,0.04,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 65 Class 1,S,,0.04,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 65 Class 1,V,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 65 Class 1,Nb,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements; Cb/Nb treated as Nb
+ASTM A1018,Grade 65 Class 1,Ti,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 65 Class 1,Yield,65,,KSI,Table 5 yield strength minimum
+ASTM A1018,Grade 65 Class 1,Tensile,80,,KSI,Table 5 tensile strength minimum
+ASTM A1018,Grade 65 Class 1,Elongation,14,,%,Table 5 elongation in 2 in minimum
+ASTM A1018,Grade 65 Class 2,C,,0.15,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 65 Class 2,Mn,,1.50,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 65 Class 2,P,,0.04,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 65 Class 2,S,,0.04,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 65 Class 2,V,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 65 Class 2,Nb,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements; Cb/Nb treated as Nb
+ASTM A1018,Grade 65 Class 2,Ti,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 65 Class 2,Yield,65,,KSI,Table 5 yield strength minimum
+ASTM A1018,Grade 65 Class 2,Tensile,75,,KSI,Table 5 tensile strength minimum
+ASTM A1018,Grade 65 Class 2,Elongation,14,,%,Table 5 elongation in 2 in minimum
+ASTM A1018,Grade 70 Class 1,C,,0.26,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 70 Class 1,Mn,,1.65,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 70 Class 1,P,,0.04,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 70 Class 1,S,,0.04,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 70 Class 1,V,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 70 Class 1,Nb,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements; Cb/Nb treated as Nb
+ASTM A1018,Grade 70 Class 1,Ti,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 70 Class 1,Yield,70,,KSI,Table 5 yield strength minimum
+ASTM A1018,Grade 70 Class 1,Tensile,85,,KSI,Table 5 tensile strength minimum
+ASTM A1018,Grade 70 Class 1,Elongation,12,,%,Table 5 elongation in 2 in minimum
+ASTM A1018,Grade 70 Class 2,C,,0.15,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 70 Class 2,Mn,,1.65,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 70 Class 2,P,,0.04,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 70 Class 2,S,,0.04,%,Table 3 HSLAS heat analysis maximum
+ASTM A1018,Grade 70 Class 2,V,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 70 Class 2,Nb,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements; Cb/Nb treated as Nb
+ASTM A1018,Grade 70 Class 2,Ti,0.005,,%,Table 3 HSLAS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 70 Class 2,Yield,70,,KSI,Table 5 yield strength minimum
+ASTM A1018,Grade 70 Class 2,Tensile,80,,KSI,Table 5 tensile strength minimum
+ASTM A1018,Grade 70 Class 2,Elongation,12,,%,Table 5 elongation in 2 in minimum
+ASTM A1018,Grade 50,C,,0.15,%,Table 3 HSLAS-F heat analysis maximum
+ASTM A1018,Grade 50,Mn,,1.65,%,Table 3 HSLAS-F heat analysis maximum
+ASTM A1018,Grade 50,P,,0.025,%,Table 3 HSLAS-F heat analysis maximum
+ASTM A1018,Grade 50,S,,0.035,%,Table 3 HSLAS-F heat analysis maximum
+ASTM A1018,Grade 50,V,0.005,,%,Table 3 HSLAS-F microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 50,Nb,0.005,,%,Table 3 HSLAS-F microalloy minimum applies to selected strengthening elements; Cb/Nb treated as Nb
+ASTM A1018,Grade 50,Ti,0.005,,%,Table 3 HSLAS-F microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 50,Yield,50,,KSI,Table 5 HSLAS-F yield strength minimum
+ASTM A1018,Grade 50,Tensile,60,,KSI,Table 5 HSLAS-F tensile strength minimum
+ASTM A1018,Grade 50,Elongation,22,,%,Table 5 HSLAS-F elongation in 2 in minimum
+ASTM A1018,Grade 60,C,,0.15,%,Table 3 HSLAS-F heat analysis maximum
+ASTM A1018,Grade 60,Mn,,1.65,%,Table 3 HSLAS-F heat analysis maximum
+ASTM A1018,Grade 60,P,,0.025,%,Table 3 HSLAS-F heat analysis maximum
+ASTM A1018,Grade 60,S,,0.035,%,Table 3 HSLAS-F heat analysis maximum
+ASTM A1018,Grade 60,V,0.005,,%,Table 3 HSLAS-F microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 60,Nb,0.005,,%,Table 3 HSLAS-F microalloy minimum applies to selected strengthening elements; Cb/Nb treated as Nb
+ASTM A1018,Grade 60,Ti,0.005,,%,Table 3 HSLAS-F microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 60,Yield,60,,KSI,Table 5 HSLAS-F yield strength minimum
+ASTM A1018,Grade 60,Tensile,70,,KSI,Table 5 HSLAS-F tensile strength minimum
+ASTM A1018,Grade 60,Elongation,16,,%,Table 5 HSLAS-F elongation in 2 in minimum
+ASTM A1018,Grade 70,C,,0.15,%,Table 3 HSLAS-F heat analysis maximum
+ASTM A1018,Grade 70,Mn,,1.65,%,Table 3 HSLAS-F heat analysis maximum
+ASTM A1018,Grade 70,P,,0.025,%,Table 3 HSLAS-F heat analysis maximum
+ASTM A1018,Grade 70,S,,0.035,%,Table 3 HSLAS-F heat analysis maximum
+ASTM A1018,Grade 70,V,0.005,,%,Table 3 HSLAS-F microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 70,Nb,0.005,,%,Table 3 HSLAS-F microalloy minimum applies to selected strengthening elements; Cb/Nb treated as Nb
+ASTM A1018,Grade 70,Ti,0.005,,%,Table 3 HSLAS-F microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 70,Yield,70,,KSI,Table 5 HSLAS-F yield strength minimum
+ASTM A1018,Grade 70,Tensile,80,,KSI,Table 5 HSLAS-F tensile strength minimum
+ASTM A1018,Grade 70,Elongation,12,,%,Table 5 HSLAS-F elongation in 2 in minimum
+ASTM A1018,Grade 80,C,,0.15,%,Table 3 HSLAS-F heat analysis maximum
+ASTM A1018,Grade 80,Mn,,1.65,%,Table 3 HSLAS-F heat analysis maximum
+ASTM A1018,Grade 80,P,,0.025,%,Table 3 HSLAS-F heat analysis maximum
+ASTM A1018,Grade 80,S,,0.035,%,Table 3 HSLAS-F heat analysis maximum
+ASTM A1018,Grade 80,V,0.005,,%,Table 3 HSLAS-F microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 80,Nb,0.005,,%,Table 3 HSLAS-F microalloy minimum applies to selected strengthening elements; Cb/Nb treated as Nb
+ASTM A1018,Grade 80,Ti,0.005,,%,Table 3 HSLAS-F microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 80,Yield,80,,KSI,Table 5 HSLAS-F yield strength minimum
+ASTM A1018,Grade 80,Tensile,90,,KSI,Table 5 HSLAS-F tensile strength minimum
+ASTM A1018,Grade 80,Elongation,12,,%,Table 5 HSLAS-F elongation in 2 in minimum
+ASTM A1018,Grade 90 Type 1,C,,0.15,%,Table 4 UHSS heat analysis maximum
+ASTM A1018,Grade 90 Type 1,Mn,,2.00,%,Table 4 UHSS heat analysis maximum
+ASTM A1018,Grade 90 Type 1,P,,0.020,%,Table 4 UHSS heat analysis maximum
+ASTM A1018,Grade 90 Type 1,S,,0.025,%,Table 4 UHSS heat analysis maximum
+ASTM A1018,Grade 90 Type 1,Cu,,0.20,%,Table 4 UHSS heat analysis maximum unless copper steel specified
+ASTM A1018,Grade 90 Type 1,Ni,,0.20,%,Table 4 UHSS heat analysis maximum
+ASTM A1018,Grade 90 Type 1,Cr,,0.15,%,Table 4 UHSS heat analysis maximum
+ASTM A1018,Grade 90 Type 1,Mo,,0.40,%,Table 4 UHSS heat analysis maximum
+ASTM A1018,Grade 90 Type 1,V,0.005,,%,Table 4 UHSS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 90 Type 1,Nb,0.005,,%,Table 4 UHSS microalloy minimum applies to selected strengthening elements; Cb/Nb treated as Nb
+ASTM A1018,Grade 90 Type 1,Ti,0.005,,%,Table 4 UHSS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 90 Type 1,Yield,90,,KSI,Table 5 UHSS yield strength minimum
+ASTM A1018,Grade 90 Type 1,Tensile,100,,KSI,Table 5 UHSS tensile strength minimum
+ASTM A1018,Grade 90 Type 1,Elongation,10,,%,Table 5 UHSS elongation in 2 in minimum
+ASTM A1018,Grade 90 Type 2,C,,0.15,%,Table 4 UHSS heat analysis maximum
+ASTM A1018,Grade 90 Type 2,Mn,,2.00,%,Table 4 UHSS heat analysis maximum
+ASTM A1018,Grade 90 Type 2,P,,0.020,%,Table 4 UHSS heat analysis maximum
+ASTM A1018,Grade 90 Type 2,S,,0.025,%,Table 4 UHSS heat analysis maximum
+ASTM A1018,Grade 90 Type 2,Cu,,0.60,%,Table 4 UHSS heat analysis maximum unless copper steel specified
+ASTM A1018,Grade 90 Type 2,Ni,,0.50,%,Table 4 UHSS heat analysis maximum
+ASTM A1018,Grade 90 Type 2,Cr,,0.30,%,Table 4 UHSS heat analysis maximum
+ASTM A1018,Grade 90 Type 2,Mo,,0.40,%,Table 4 UHSS heat analysis maximum
+ASTM A1018,Grade 90 Type 2,V,0.005,,%,Table 4 UHSS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 90 Type 2,Nb,0.005,,%,Table 4 UHSS microalloy minimum applies to selected strengthening elements; Cb/Nb treated as Nb
+ASTM A1018,Grade 90 Type 2,Ti,0.005,,%,Table 4 UHSS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 90 Type 2,Yield,90,,KSI,Table 5 UHSS yield strength minimum
+ASTM A1018,Grade 90 Type 2,Tensile,100,,KSI,Table 5 UHSS tensile strength minimum
+ASTM A1018,Grade 90 Type 2,Elongation,10,,%,Table 5 UHSS elongation in 2 in minimum
+ASTM A1018,Grade 100 Type 1,C,,0.15,%,Table 4 UHSS heat analysis maximum
+ASTM A1018,Grade 100 Type 1,Mn,,2.00,%,Table 4 UHSS heat analysis maximum
+ASTM A1018,Grade 100 Type 1,P,,0.020,%,Table 4 UHSS heat analysis maximum
+ASTM A1018,Grade 100 Type 1,S,,0.025,%,Table 4 UHSS heat analysis maximum
+ASTM A1018,Grade 100 Type 1,Cu,,0.20,%,Table 4 UHSS heat analysis maximum unless copper steel specified
+ASTM A1018,Grade 100 Type 1,Ni,,0.20,%,Table 4 UHSS heat analysis maximum
+ASTM A1018,Grade 100 Type 1,Cr,,0.15,%,Table 4 UHSS heat analysis maximum
+ASTM A1018,Grade 100 Type 1,Mo,,0.40,%,Table 4 UHSS heat analysis maximum
+ASTM A1018,Grade 100 Type 1,V,0.005,,%,Table 4 UHSS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 100 Type 1,Nb,0.005,,%,Table 4 UHSS microalloy minimum applies to selected strengthening elements; Cb/Nb treated as Nb
+ASTM A1018,Grade 100 Type 1,Ti,0.005,,%,Table 4 UHSS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 100 Type 1,Yield,100,,KSI,Table 5 UHSS yield strength minimum
+ASTM A1018,Grade 100 Type 1,Tensile,110,,KSI,Table 5 UHSS tensile strength minimum
+ASTM A1018,Grade 100 Type 1,Elongation,10,,%,Table 5 UHSS elongation in 2 in minimum
+ASTM A1018,Grade 100 Type 2,C,,0.15,%,Table 4 UHSS heat analysis maximum
+ASTM A1018,Grade 100 Type 2,Mn,,2.00,%,Table 4 UHSS heat analysis maximum
+ASTM A1018,Grade 100 Type 2,P,,0.020,%,Table 4 UHSS heat analysis maximum
+ASTM A1018,Grade 100 Type 2,S,,0.025,%,Table 4 UHSS heat analysis maximum
+ASTM A1018,Grade 100 Type 2,Cu,,0.60,%,Table 4 UHSS heat analysis maximum unless copper steel specified
+ASTM A1018,Grade 100 Type 2,Ni,,0.50,%,Table 4 UHSS heat analysis maximum
+ASTM A1018,Grade 100 Type 2,Cr,,0.30,%,Table 4 UHSS heat analysis maximum
+ASTM A1018,Grade 100 Type 2,Mo,,0.40,%,Table 4 UHSS heat analysis maximum
+ASTM A1018,Grade 100 Type 2,V,0.005,,%,Table 4 UHSS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 100 Type 2,Nb,0.005,,%,Table 4 UHSS microalloy minimum applies to selected strengthening elements; Cb/Nb treated as Nb
+ASTM A1018,Grade 100 Type 2,Ti,0.005,,%,Table 4 UHSS microalloy minimum applies to selected strengthening elements
+ASTM A1018,Grade 100 Type 2,Yield,100,,KSI,Table 5 UHSS yield strength minimum
+ASTM A1018,Grade 100 Type 2,Tensile,110,,KSI,Table 5 UHSS tensile strength minimum
+ASTM A1018,Grade 100 Type 2,Elongation,10,,%,Table 5 UHSS elongation in 2 in minimum
