@@ -7,3 +7,4 @@ pypdfium2
 Pillow
 numpy
 openai
+python-dotenv

@@ -15,6 +15,11 @@ import pandas as pd
 import streamlit as st
 
 try:
+    from dotenv import load_dotenv
+except ImportError:
+    load_dotenv = None
+
+try:
     import pdfplumber
 except ImportError:
     pdfplumber = None
@@ -28,6 +33,9 @@ try:
     from openai import OpenAI
 except ImportError:
     OpenAI = None
+
+if load_dotenv is not None:
+    load_dotenv(Path(__file__).resolve().parent / ".env")
 
 
 COMMON_ELEMENTS = {
@@ -69,6 +77,7 @@ MECHANICAL_ORDER = [
     "Charpy #3 FT-LB",
     "Charpy Avg FT-LB",
 ]
+VISION_WARNINGS: list[str] = []
 
 ELEMENT_ALIASES = {element: [element] for element in ELEMENT_ORDER}
 MECHANICAL_ALIASES = {
@@ -779,11 +788,18 @@ def normalize_vision_records(data: object, source_name: str) -> pd.DataFrame:
 
 
 def extract_jsw_pdf_dataframe_with_vision(uploaded_file, text: str, api_key: str = "") -> pd.DataFrame:
-    if pdfium is None or OpenAI is None or "JSW" not in text.upper():
+    if "JSW" not in text.upper():
+        return pd.DataFrame()
+    if pdfium is None:
+        VISION_WARNINGS.append("AI vision was not run because pypdfium2 is not installed.")
+        return pd.DataFrame()
+    if OpenAI is None:
+        VISION_WARNINGS.append("AI vision was not run because the openai package is not installed.")
         return pd.DataFrame()
 
     key = get_openai_api_key(api_key)
     if not key:
+        VISION_WARNINGS.append("AI vision was not run because OPENAI_API_KEY was not found.")
         return pd.DataFrame()
 
     uploaded_file.seek(0)
@@ -823,22 +839,27 @@ Extraction Note.
 Known shipping rows from readable pages:
 {json.dumps(shipping_rows, ensure_ascii=False)}
 """
-        response = client.responses.create(
-            model=model,
-            input=[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "input_text", "text": prompt},
-                        {"type": "input_image", "image_url": data_url, "detail": "high"},
-                    ],
-                }
-            ],
-        )
-        page_data = parse_json_from_model_text(response.output_text)
-        page_df = normalize_vision_records(page_data, source_name)
-        if not page_df.empty:
-            all_records.extend(page_df.to_dict("records"))
+        try:
+            response = client.responses.create(
+                model=model,
+                input=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "input_text", "text": prompt},
+                            {"type": "input_image", "image_url": data_url, "detail": "high"},
+                        ],
+                    }
+                ],
+            )
+            page_data = parse_json_from_model_text(response.output_text)
+            page_df = normalize_vision_records(page_data, source_name)
+            if not page_df.empty:
+                all_records.extend(page_df.to_dict("records"))
+            else:
+                VISION_WARNINGS.append(f"AI vision returned no rows for {source_name}, page {page_index + 1}.")
+        except Exception as exc:
+            VISION_WARNINGS.append(f"AI vision failed for {source_name}, page {page_index + 1}: {exc}")
 
     return clean_dataframe(pd.DataFrame(all_records))
 
@@ -848,12 +869,10 @@ def extract_jsw_pdf_dataframe(uploaded_file, text: str, use_vision: bool = False
         return pd.DataFrame()
 
     if use_vision:
-        try:
-            vision_df = extract_jsw_pdf_dataframe_with_vision(uploaded_file, text, vision_api_key)
-            if not vision_df.empty:
-                return vision_df
-        except Exception:
-            uploaded_file.seek(0)
+        vision_df = extract_jsw_pdf_dataframe_with_vision(uploaded_file, text, vision_api_key)
+        if not vision_df.empty:
+            return vision_df
+        uploaded_file.seek(0)
 
     uploaded_file.seek(0)
     rows = []
@@ -1763,6 +1782,7 @@ if is_pdf:
     pdf_frames = []
     pdf_text_parts = []
     pdf_errors = []
+    VISION_WARNINGS.clear()
     for pdf_file in pdf_files:
         try:
             parsed_df, parsed_text = pdf_to_dataframe(
@@ -1786,6 +1806,16 @@ if is_pdf:
 
     df = clean_dataframe(pd.concat(pdf_frames, ignore_index=True))
     pdf_text = "\n\n".join(pdf_text_parts)
+    if use_vision_extraction:
+        if VISION_WARNINGS:
+            with st.expander("AI Vision Extraction Status", expanded=True):
+                st.warning("AI vision did not fully extract every JSW PDF page. The app used the safe PDF parser for missing rows.")
+                for warning in VISION_WARNINGS:
+                    st.write(f"- {warning}")
+        elif dataframe_has_partial_jsw_rows(df):
+            st.warning("AI vision was enabled, but some JSW rows are still partial. Review rows with Extraction Note.")
+        else:
+            st.success("AI vision extraction completed for the JSW PDF pages.")
 else:
     if pdf_files and excel_files:
         st.error("Do not upload PDF and Excel files at the same time. Choose one file type for a single report.")
