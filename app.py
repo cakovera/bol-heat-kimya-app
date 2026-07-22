@@ -859,6 +859,13 @@ Known shipping rows from readable pages:
             else:
                 VISION_WARNINGS.append(f"AI vision returned no rows for {source_name}, page {page_index + 1}.")
         except Exception as exc:
+            error_text = str(exc)
+            if "insufficient_quota" in error_text or "exceeded your current quota" in error_text:
+                VISION_WARNINGS.append(
+                    "AI vision stopped because the OpenAI API account has no available quota. "
+                    "Add billing/credits in OpenAI Platform, then run the extraction again."
+                )
+                break
             VISION_WARNINGS.append(f"AI vision failed for {source_name}, page {page_index + 1}: {exc}")
 
     return clean_dataframe(pd.DataFrame(all_records))
