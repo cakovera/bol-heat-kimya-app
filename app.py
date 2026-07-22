@@ -708,9 +708,152 @@ def clean_jsw_page_values(values: dict[str, str]) -> dict[str, str]:
     return cleaned
 
 
-def extract_jsw_pdf_dataframe(uploaded_file, text: str) -> pd.DataFrame:
+def get_openai_api_key(manual_key: str = "") -> str:
+    if manual_key:
+        return manual_key.strip()
+    env_key = os.getenv("OPENAI_API_KEY", "").strip()
+    if env_key:
+        return env_key
+    try:
+        return str(st.secrets.get("OPENAI_API_KEY", "")).strip()
+    except Exception:
+        return ""
+
+
+def dataframe_has_partial_jsw_rows(df: pd.DataFrame) -> bool:
+    if df.empty or "Extraction Note" not in df.columns:
+        return False
+    return df["Extraction Note"].fillna("").astype(str).str.contains("JSW PDF", case=False, regex=False).any()
+
+
+def render_pdf_page_data_url(page, scale: float = 2.3) -> str:
+    bitmap = page.render(scale=scale)
+    image = bitmap.to_pil().convert("RGB")
+    buffer = BytesIO()
+    image.save(buffer, format="JPEG", quality=88, optimize=True)
+    encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+    return f"data:image/jpeg;base64,{encoded}"
+
+
+def parse_json_from_model_text(text: str) -> object:
+    cleaned = str(text or "").strip()
+    cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s*```$", "", cleaned)
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        match = re.search(r"(\{.*\}|\[.*\])", cleaned, flags=re.DOTALL)
+        if not match:
+            raise
+        return json.loads(match.group(1))
+
+
+def normalize_vision_records(data: object, source_name: str) -> pd.DataFrame:
+    if isinstance(data, dict):
+        rows = data.get("rows", [])
+    elif isinstance(data, list):
+        rows = data
+    else:
+        rows = []
+
+    records = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        record = {
+            "BOL": Path(source_name).stem,
+            "FULL_TAG_NUM": str(row.get("FULL_TAG_NUM", "") or row.get("Coil", "") or "").strip(),
+            "Heat No": str(row.get("Heat No", "") or row.get("Heat", "") or "").strip(),
+            "Material Spec": str(row.get("Material Spec", "") or row.get("Standard", "") or "").strip(),
+        }
+        for element in ELEMENT_ORDER:
+            record[element] = str(row.get(element, "") or "").strip()
+        for mechanical in MECHANICAL_ORDER:
+            record[mechanical] = str(row.get(mechanical, "") or "").strip()
+        note = str(row.get("Extraction Note", "") or "").strip()
+        if note:
+            record["Extraction Note"] = note
+        records.append(record)
+
+    return clean_dataframe(pd.DataFrame(records))
+
+
+def extract_jsw_pdf_dataframe_with_vision(uploaded_file, text: str, api_key: str = "") -> pd.DataFrame:
+    if pdfium is None or OpenAI is None or "JSW" not in text.upper():
+        return pd.DataFrame()
+
+    key = get_openai_api_key(api_key)
+    if not key:
+        return pd.DataFrame()
+
+    uploaded_file.seek(0)
+    pdf_bytes = uploaded_file.read()
+    uploaded_file.seek(0)
+
+    shipping_rows = extract_jsw_shipping_rows(text.split("\f") if "\f" in text else [text])
+    source_name = getattr(uploaded_file, "name", "JSW_PDF")
+    client = OpenAI(api_key=key)
+    model = os.getenv("OPENAI_VISION_MODEL", "gpt-5")
+    all_records = []
+
+    document = pdfium.PdfDocument(pdf_bytes)
+    for page_index in range(len(document)):
+        page = document[page_index]
+        if float(page.get_width()) < float(page.get_height()):
+            continue
+
+        data_url = render_pdf_page_data_url(page)
+        prompt = f"""
+You are extracting values from a JSW Steel Metallurgical Test Report image.
+Return only valid JSON with this shape: {{"rows":[{{...}}]}}.
+Use the visible page image as the source of truth.
+Use PROD1 chemistry values, not LADLE.
+Create one row per visible Material/coil certified on this MTR page.
+Match Heat No from the page header or the provided shipping rows.
+If multiple mechanical rows apply to the same material, use the lowest Yield, lowest Tensile, and lowest Elongation visible.
+For Charpy/Impact Test, use the TCVN impact row visible for the material; include Temp and Test 1/Test 2/Test 3/Avg in FT-LB.
+Leave a field blank if it is not visible. Do not infer hidden values.
+
+Required fields:
+FULL_TAG_NUM, Heat No, Material Spec,
+{", ".join(ELEMENT_ORDER)},
+{", ".join(MECHANICAL_ORDER)},
+Extraction Note.
+
+Known shipping rows from readable pages:
+{json.dumps(shipping_rows, ensure_ascii=False)}
+"""
+        response = client.responses.create(
+            model=model,
+            input=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "input_text", "text": prompt},
+                        {"type": "input_image", "image_url": data_url, "detail": "high"},
+                    ],
+                }
+            ],
+        )
+        page_data = parse_json_from_model_text(response.output_text)
+        page_df = normalize_vision_records(page_data, source_name)
+        if not page_df.empty:
+            all_records.extend(page_df.to_dict("records"))
+
+    return clean_dataframe(pd.DataFrame(all_records))
+
+
+def extract_jsw_pdf_dataframe(uploaded_file, text: str, use_vision: bool = False, vision_api_key: str = "") -> pd.DataFrame:
     if pdfplumber is None or "JSW" not in text.upper():
         return pd.DataFrame()
+
+    if use_vision:
+        try:
+            vision_df = extract_jsw_pdf_dataframe_with_vision(uploaded_file, text, vision_api_key)
+            if not vision_df.empty:
+                return vision_df
+        except Exception:
+            uploaded_file.seek(0)
 
     uploaded_file.seek(0)
     rows = []
@@ -752,9 +895,14 @@ def extract_jsw_pdf_dataframe(uploaded_file, text: str) -> pd.DataFrame:
     return clean_dataframe(pd.DataFrame(rows))
 
 
-def pdf_to_dataframe(uploaded_file, fallback_bol: str = "") -> tuple[pd.DataFrame, str]:
+def pdf_to_dataframe(
+    uploaded_file,
+    fallback_bol: str = "",
+    use_vision: bool = False,
+    vision_api_key: str = "",
+) -> tuple[pd.DataFrame, str]:
     text, tables = extract_pdf_content(uploaded_file)
-    jsw_df = extract_jsw_pdf_dataframe(uploaded_file, text)
+    jsw_df = extract_jsw_pdf_dataframe(uploaded_file, text, use_vision=use_vision, vision_api_key=vision_api_key)
     if not jsw_df.empty:
         return jsw_df, text
 
@@ -1585,6 +1733,30 @@ excel_files = [file for file in uploaded_files if not file.name.lower().endswith
 is_pdf = bool(pdf_files) and not excel_files
 pdf_text = ""
 source_name = ", ".join(file.name for file in uploaded_files)
+use_vision_extraction = False
+vision_api_key = ""
+
+if pdf_files:
+    with st.sidebar:
+        st.header("PDF Extraction")
+        use_vision_extraction = st.checkbox(
+            "Use AI vision extraction for JSW PDFs",
+            value=False,
+            help="Reads JSW PDF pages from the rendered image when the embedded PDF text is not reliable.",
+        )
+        if use_vision_extraction:
+            has_secret_key = bool(get_openai_api_key())
+            if has_secret_key:
+                st.caption("OpenAI API key found in environment or Streamlit secrets.")
+            else:
+                st.caption("Add OPENAI_API_KEY in Streamlit secrets, or enter it below for local testing.")
+            vision_api_key = st.text_input(
+                "OpenAI API key",
+                type="password",
+                placeholder="sk-...",
+                help="Used only for AI vision extraction. Leave blank when OPENAI_API_KEY is set.",
+            )
+            st.caption(f"Vision model: {os.getenv('OPENAI_VISION_MODEL', 'gpt-5')}")
 
 if is_pdf:
     sheet_name = "PDF Batch" if len(pdf_files) > 1 else "PDF"
@@ -1593,7 +1765,11 @@ if is_pdf:
     pdf_errors = []
     for pdf_file in pdf_files:
         try:
-            parsed_df, parsed_text = pdf_to_dataframe(pdf_file)
+            parsed_df, parsed_text = pdf_to_dataframe(
+                pdf_file,
+                use_vision=use_vision_extraction,
+                vision_api_key=vision_api_key,
+            )
             parsed_df.insert(0, "Source PDF", pdf_file.name)
             pdf_frames.append(parsed_df)
             pdf_text_parts.append(f"--- {pdf_file.name} ---\n{parsed_text}")
