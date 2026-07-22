@@ -365,31 +365,35 @@ def extract_sdi_mechanical_values(text: str) -> dict[str, str]:
     return values
 
 
-JSW_CID_MAP = {
-    "15": "A",
-    "22": "1",
-    "23": ".",
-    "24": "0",
-    "25": "5",
-    "26": "2",
-    "27": "4",
-    "28": "6",
-    "29": "7",
-    "30": "8",
-    "31": "3",
-}
+JSW_DEFAULT_CID_MAP = {"15": "A", "23": "."}
 
 JSW_CHEMISTRY_ORDER = ["C", "Mn", "P", "S", "Si", "Cu", "Ni", "Cr", "Mo", "Sn", "Al", "N", "V", "B", "Ti", "Nb", "Ca", "CE"]
 
 
-def decode_jsw_word(value: object) -> str:
+def jsw_tokens(value: object) -> list[str]:
+    return re.findall(r"\(cid:(\d+)\)|([A-Za-z0-9./-])", str(value or ""))
+
+
+def flatten_jsw_tokens(value: object) -> list[tuple[str, str]]:
+    tokens = []
+    for cid, literal in jsw_tokens(value):
+        tokens.append(("cid", cid) if cid else ("literal", literal))
+    return tokens
+
+
+def decode_jsw_word(value: object, digit_map: dict[str, str] | None = None) -> str:
+    digit_map = digit_map or {}
     text = str(value or "")
-    text = re.sub(r"\(cid:(\d+)\)", lambda match: JSW_CID_MAP.get(match.group(1), ""), text)
+    text = re.sub(
+        r"\(cid:(\d+)\)",
+        lambda match: digit_map.get(match.group(1), JSW_DEFAULT_CID_MAP.get(match.group(1), "")),
+        text,
+    )
     return text.replace("%", " ").replace("K", "").strip()
 
 
-def jsw_numeric(value: object) -> str:
-    text = decode_jsw_word(value)
+def jsw_numeric(value: object, digit_map: dict[str, str] | None = None) -> str:
+    text = decode_jsw_word(value, digit_map)
     match = re.search(r"-?\d+(?:\.\d+)?", text)
     return match.group(0) if match else ""
 
@@ -418,12 +422,18 @@ def words_in_band(words: list[dict], top_min: float, top_max: float, x_min: floa
     )
 
 
-def jsw_values_by_x_band(words: list[dict], top_min: float, top_max: float, bands: dict[str, tuple[float, float]]) -> dict[str, str]:
+def jsw_values_by_x_band(
+    words: list[dict],
+    top_min: float,
+    top_max: float,
+    bands: dict[str, tuple[float, float]],
+    digit_map: dict[str, str] | None = None,
+) -> dict[str, str]:
     values = {}
     for label, (x_min, x_max) in bands.items():
         band_words = words_in_band(words, top_min, top_max, x_min, x_max)
-        joined_value = "".join(decode_jsw_word(word["text"]) for word in band_words)
-        values[label] = jsw_numeric(joined_value)
+        joined_value = "".join(decode_jsw_word(word["text"], digit_map) for word in band_words)
+        values[label] = jsw_numeric(joined_value, digit_map)
     return values
 
 
@@ -434,18 +444,99 @@ def extract_jsw_shipping_rows(page_texts: list[str]) -> list[dict[str, str]]:
             continue
         spec_match = re.search(r"(ASTM[-\s]*A\s*\d+\s+GR\s*\d+)", page_text, flags=re.IGNORECASE)
         material_spec = spec_match.group(1).replace("ASTM-", "ASTM ").strip() if spec_match else ""
-        for match in re.finditer(r"\b(\d{7}A\d)\s+(S\d{5})\d+[A-Z]\b", page_text):
+        for match in re.finditer(
+            r"\b(\d{7}A\d)\s+(S\d{5})\d+[A-Z]\s+\S+\s+\d+\s+\d+\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)",
+            page_text,
+        ):
             rows.append(
                 {
                     "FULL_TAG_NUM": match.group(1),
                     "Heat No": match.group(2),
                     "Material Spec": material_spec,
+                    "Thick": match.group(3),
+                    "Width": match.group(4),
+                    "Length": match.group(5),
                 }
             )
     return rows
 
 
-def extract_jsw_page_values(page) -> dict[str, str]:
+def update_jsw_digit_map_from_candidate(
+    digit_map: dict[str, str],
+    candidate_text: str,
+    expected: str,
+) -> None:
+    tokens = flatten_jsw_tokens(candidate_text)
+    expected_tokens = list(expected)
+    if len(tokens) != len(expected_tokens):
+        return
+
+    trial_map = digit_map.copy()
+    for (token_type, token), expected_char in zip(tokens, expected_tokens):
+        if not expected_char.isdigit() and expected_char not in {"A", "."}:
+            continue
+        if token_type == "cid":
+            current = trial_map.get(token, JSW_DEFAULT_CID_MAP.get(token))
+            if current is not None and current != expected_char:
+                return
+            trial_map[token] = expected_char
+        elif token != expected_char:
+            return
+
+    digit_map.update(trial_map)
+
+
+def build_jsw_digit_map(page, shipping_rows: list[dict[str, str]]) -> dict[str, str]:
+    digit_map = JSW_DEFAULT_CID_MAP.copy()
+    words = page.extract_words(x_tolerance=1, y_tolerance=1, keep_blank_chars=False, use_text_flow=False)
+    bottom_words = [
+        word
+        for word in words
+        if "(cid:" in str(word.get("text", "")) and 390 <= float(word.get("top", 0)) <= 410
+    ]
+
+    known_values = ["1.2000", "50.000"]
+    for shipping in shipping_rows:
+        if shipping.get("FULL_TAG_NUM"):
+            known_values.append(str(shipping["FULL_TAG_NUM"]))
+        if shipping.get("Length"):
+            length = parse_float(shipping["Length"])
+            if length is not None:
+                known_values.extend([f"{length:.1f}", f"{length:.2f}"])
+
+    for expected in known_values:
+        expected = expected.strip()
+        if not expected:
+            continue
+        for index in range(len(bottom_words)):
+            for width in range(1, 5):
+                candidate_words = bottom_words[index : index + width]
+                if not candidate_words:
+                    continue
+                candidate = "".join(str(word["text"]) for word in candidate_words)
+                update_jsw_digit_map_from_candidate(digit_map, candidate, expected)
+
+    header_words = [
+        word
+        for word in words
+        if "(cid:" in str(word.get("text", "")) and 55 <= float(word.get("top", 0)) <= 68
+    ]
+    for shipping in shipping_rows:
+        expected = str(shipping.get("Heat No", "")).strip()
+        if not expected:
+            continue
+        for index in range(len(header_words)):
+            for width in range(1, 6):
+                candidate_words = header_words[index : index + width]
+                if not candidate_words:
+                    continue
+                candidate = "".join(str(word["text"]) for word in candidate_words)
+                update_jsw_digit_map_from_candidate(digit_map, candidate, expected)
+
+    return digit_map
+
+
+def extract_jsw_page_values(page, digit_map: dict[str, str] | None = None) -> dict[str, str]:
     words = page.extract_words(x_tolerance=1, y_tolerance=1, keep_blank_chars=False, use_text_flow=False)
     values = {}
 
@@ -469,7 +560,7 @@ def extract_jsw_page_values(page) -> dict[str, str]:
         "Nb": (387, 409),
         "Ca": (410, 435),
     }
-    values.update(jsw_values_by_x_band(words, 252, 260, chemistry_bands))
+    values.update(jsw_values_by_x_band(words, 252, 260, chemistry_bands, digit_map))
 
     mechanical_bands = {
         "Yield": (225, 250),
@@ -478,7 +569,7 @@ def extract_jsw_page_values(page) -> dict[str, str]:
     }
     mechanical_values = {key: [] for key in mechanical_bands}
     for top_min, top_max in [(300, 307), (312, 319)]:
-        row_values = jsw_values_by_x_band(words, top_min, top_max, mechanical_bands)
+        row_values = jsw_values_by_x_band(words, top_min, top_max, mechanical_bands, digit_map)
         for key, value in row_values.items():
             parsed = parse_float(value)
             if parsed is not None:
@@ -494,8 +585,8 @@ def extract_jsw_page_values(page) -> dict[str, str]:
         "Charpy Avg FT-LB": (312, 332),
     }
     charpy_values = {key: [] for key in charpy_bands}
-    for top_min, top_max in [(340, 348), (352, 358), (364, 370)]:
-        row_values = jsw_values_by_x_band(words, top_min, top_max, charpy_bands)
+    for top_min, top_max in [(352, 358), (364, 370)]:
+        row_values = jsw_values_by_x_band(words, top_min, top_max, charpy_bands, digit_map)
         for key, value in row_values.items():
             parsed = parse_float(value)
             if parsed is not None:
@@ -504,6 +595,38 @@ def extract_jsw_page_values(page) -> dict[str, str]:
         values[key] = min_number(found_values)
 
     return values
+
+
+def extract_jsw_page_records(page, digit_map: dict[str, str] | None = None) -> list[dict[str, str]]:
+    common_values = extract_jsw_page_values(page, digit_map)
+    records = []
+    words = page.extract_words(x_tolerance=1, y_tolerance=1, keep_blank_chars=False, use_text_flow=False)
+
+    mechanical_bands = {
+        "Yield": (225, 250),
+        "Tensile": (270, 300),
+        "Elongation": (305, 335),
+    }
+    charpy_bands = {
+        "Charpy Temp F": (198, 218),
+        "Charpy #1 FT-LB": (225, 250),
+        "Charpy #2 FT-LB": (254, 279),
+        "Charpy #3 FT-LB": (283, 308),
+        "Charpy Avg FT-LB": (312, 332),
+    }
+    mechanical_rows = [(300, 307), (312, 319)]
+    charpy_rows = [(352, 358), (364, 370)]
+
+    for index, row_band in enumerate(mechanical_rows):
+        record = {element: common_values.get(element, "") for element in ELEMENT_ORDER}
+        record.update(jsw_values_by_x_band(words, row_band[0], row_band[1], mechanical_bands, digit_map))
+        if index < len(charpy_rows):
+            record.update(jsw_values_by_x_band(words, charpy_rows[index][0], charpy_rows[index][1], charpy_bands, digit_map))
+        cleaned = clean_jsw_page_values(record)
+        if any(cleaned.get(key) for key in ["Yield", "Tensile", "Elongation", "C", "Mn", "P"]):
+            records.append(cleaned)
+
+    return records
 
 
 def has_jsw_test_table(page) -> bool:
@@ -532,6 +655,8 @@ def clean_jsw_page_values(values: dict[str, str]) -> dict[str, str]:
         value = parse_float(cleaned.get(key))
         if value is None or value < minimum or value > maximum:
             cleaned[key] = ""
+    if str(cleaned.get("P", "")).strip() in {"0.0", "0.00"}:
+        cleaned["P"] = ""
     if not cleaned.get("C"):
         for element in ELEMENT_ORDER:
             cleaned[element] = ""
@@ -550,7 +675,10 @@ def clean_jsw_page_values(values: dict[str, str]) -> dict[str, str]:
         charpy_avg = parse_float(cleaned.get("Charpy Avg FT-LB"))
         if all(value is not None for value in charpy_tests):
             calculated_avg = round(sum(charpy_tests) / len(charpy_tests))
-            if charpy_avg is None or charpy_avg < min(charpy_tests) - 5 or charpy_avg > max(charpy_tests) + 5:
+            if charpy_avg is None or abs(calculated_avg - charpy_avg) > 5:
+                for key in ["Charpy Temp F", "Charpy #1 FT-LB", "Charpy #2 FT-LB", "Charpy #3 FT-LB", "Charpy Avg FT-LB"]:
+                    cleaned[key] = ""
+            elif charpy_avg < min(charpy_tests) - 5 or charpy_avg > max(charpy_tests) + 5:
                 cleaned["Charpy Avg FT-LB"] = f"{calculated_avg:g}"
     return cleaned
 
@@ -566,16 +694,16 @@ def extract_jsw_pdf_dataframe(uploaded_file, text: str) -> pd.DataFrame:
         shipping_rows = extract_jsw_shipping_rows(page_texts)
         mtr_pages = []
         for page in pdf.pages:
-            page_values = clean_jsw_page_values(extract_jsw_page_values(page))
-            has_required_values = has_jsw_test_table(page) and any(page_values.get(element) for element in ["C", "Mn", "P"])
-            if has_required_values:
-                mtr_pages.append(page_values)
+            if not has_jsw_test_table(page):
+                continue
+            digit_map = build_jsw_digit_map(page, shipping_rows)
+            mtr_pages.extend(extract_jsw_page_records(page, digit_map))
 
-    if not mtr_pages:
+    if not shipping_rows:
         return pd.DataFrame()
 
-    for index, page_values in enumerate(mtr_pages):
-        shipping = shipping_rows[index] if index < len(shipping_rows) else {}
+    for index, shipping in enumerate(shipping_rows):
+        page_values = mtr_pages[index] if index < len(mtr_pages) else {}
         record = {
             "BOL": Path(getattr(uploaded_file, "name", "JSW_PDF")).stem,
             "FULL_TAG_NUM": shipping.get("FULL_TAG_NUM", ""),
@@ -586,6 +714,8 @@ def extract_jsw_pdf_dataframe(uploaded_file, text: str) -> pd.DataFrame:
             record[element] = page_values.get(element, "")
         for mechanical in MECHANICAL_ORDER:
             record[mechanical] = page_values.get(mechanical, "")
+        if not page_values:
+            record["Extraction Note"] = "JSW PDF values could not be safely decoded; verify chemistry, mechanical, and Charpy values visually."
         rows.append(record)
 
     return clean_dataframe(pd.DataFrame(rows))
@@ -830,7 +960,7 @@ def build_compliance_table(
                 min_value = parse_float(rule["Min"])
                 max_value = parse_float(rule["Max"])
                 if number is None:
-                    status = "MISSING VALUE"
+                    status = "NEEDS REVIEW - MISSING VALUE"
                 elif min_value is not None and number < min_value:
                     status = "FAIL - BELOW MIN"
                 elif max_value is not None and number > max_value:
@@ -841,6 +971,8 @@ def build_compliance_table(
             note = str(rule["Note"] or "")
             if status == "NO CHECK":
                 note = (note + " | " if note else "") + f"No report column found for '{property_name}' or an equivalent alias."
+            elif status == "NEEDS REVIEW - MISSING VALUE":
+                note = (note + " | " if note else "") + "A rule exists, but the value is blank or was not extracted from the uploaded file."
 
             rows.append(
                 {
@@ -859,6 +991,16 @@ def build_compliance_table(
             )
 
     return pd.DataFrame(rows)
+
+
+def split_compliance_results(compliance: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    if compliance.empty or "Status" not in compliance.columns:
+        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+    status = compliance["Status"].astype(str)
+    failed = compliance[status.str.startswith("FAIL", na=False)].copy()
+    needs_review = compliance[status.str.contains("NEEDS REVIEW|MISSING VALUE|NO CHECK", regex=True, na=False)].copy()
+    passed = compliance[status == "PASS"].copy()
+    return failed, needs_review, passed
 
 
 def make_excel_report(
@@ -1053,13 +1195,7 @@ def make_compliance_pdf_report(
     )
     story = []
 
-    failed = (
-        compliance[
-            compliance["Status"].astype(str).str.contains("FAIL|MISSING VALUE|NO CHECK", regex=True)
-        ].copy()
-        if not compliance.empty
-        else pd.DataFrame()
-    )
+    failed, needs_review, _passed = split_compliance_results(compliance)
 
     def as_paragraph(value: object, style=small_style) -> Paragraph:
         return Paragraph(escape(str(value if value is not None else "")), style)
@@ -1072,8 +1208,18 @@ def make_compliance_pdf_report(
 
     story.append(Paragraph(f"BOL {escape(str(bol_number or 'PDF_BATCH'))} - Standards Compliance Report", title_style))
 
-    status_color = colors.HexColor("#DCFCE7") if failed.empty and not compliance.empty else colors.HexColor("#FEE2E2")
-    status_text = "ALL CHECKS PASSED" if failed.empty and not compliance.empty else f"{len(failed)} FAILED / NEEDS REVIEW"
+    if compliance.empty:
+        status_color = colors.HexColor("#FEF3C7")
+        status_text = "NO STANDARD CHECK"
+    elif not failed.empty:
+        status_color = colors.HexColor("#FEE2E2")
+        status_text = f"{len(failed)} FAILED"
+    elif not needs_review.empty:
+        status_color = colors.HexColor("#FEF3C7")
+        status_text = f"{len(needs_review)} NEEDS REVIEW"
+    else:
+        status_color = colors.HexColor("#DCFCE7")
+        status_text = "ALL CHECKED VALUES PASSED"
     badge = Table([[Paragraph(status_text, small_bold_style)]], colWidths=[2.5 * inch])
     badge.setStyle(
         TableStyle(
@@ -1096,7 +1242,8 @@ def make_compliance_pdf_report(
         ["Grade / Class", grade or "-"],
         ["Heat Count", str(heat_summary.iloc[:, 0].nunique() if not heat_summary.empty else 0)],
         ["Check Rows", str(len(compliance))],
-        ["Failed / Needs Review", str(len(failed))],
+        ["Failed", str(len(failed))],
+        ["Needs Review / Missing", str(len(needs_review))],
         ["Generated At", datetime.now().strftime("%Y-%m-%d %H:%M")],
     ]
     summary_table = Table(
@@ -1123,7 +1270,7 @@ def make_compliance_pdf_report(
     def status_fill(status: str):
         if "FAIL" in status:
             return colors.HexColor("#FEE2E2")
-        if "MISSING VALUE" in status or "NO CHECK" in status:
+        if "NEEDS REVIEW" in status or "MISSING VALUE" in status or "NO CHECK" in status:
             return colors.HexColor("#FEF3C7")
         return colors.HexColor("#DCFCE7")
 
@@ -1194,7 +1341,8 @@ def make_compliance_pdf_report(
     if compliance.empty:
         story.append(Paragraph("No standard compliance result was found. Enable the standard check and verify the Standard/Grade fields.", styles["Normal"]))
     else:
-        add_table("Failed or Needs Review Values", failed)
+        add_table("Failed Values", failed)
+        add_table("Needs Review / Missing Values", needs_review)
         story.append(PageBreak())
         add_table("All Standard Check Results", compliance)
 
@@ -1625,7 +1773,7 @@ compliance = (
     if enable_standard_check
     else pd.DataFrame()
 )
-failed_compliance = compliance[compliance["Status"].astype(str).str.contains("FAIL|MISSING VALUE|NO CHECK", regex=True)] if not compliance.empty else pd.DataFrame()
+failed_compliance, review_compliance, passed_compliance = split_compliance_results(compliance)
 report_id = bol_number or "ALL"
 
 st.markdown('<div class="section-title">Result Summary</div>', unsafe_allow_html=True)
@@ -1656,11 +1804,15 @@ with compliance_tab:
     elif compliance.empty:
         st.warning("No rules were found for this standard/grade, or the limit file is empty.")
     else:
-        if failed_compliance.empty:
+        if failed_compliance.empty and review_compliance.empty:
             st.success("All checked values are within limits.")
         else:
-            st.error(f"{len(failed_compliance)} failed or needs-review rows found.")
-            st.dataframe(failed_compliance, use_container_width=True, hide_index=True)
+            if not failed_compliance.empty:
+                st.error(f"{len(failed_compliance)} failed rows found.")
+                st.dataframe(failed_compliance, use_container_width=True, hide_index=True)
+            if not review_compliance.empty:
+                st.warning(f"{len(review_compliance)} rows need review because the value is missing or the column could not be matched.")
+                st.dataframe(review_compliance, use_container_width=True, hide_index=True)
         st.dataframe(compliance, use_container_width=True, hide_index=True)
 
 with detail_tab:
