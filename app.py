@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 import json
 import subprocess
+import base64
+import os
 from html import escape
 from datetime import datetime
 from io import BytesIO
@@ -16,6 +18,16 @@ try:
     import pdfplumber
 except ImportError:
     pdfplumber = None
+
+try:
+    import pypdfium2 as pdfium
+except ImportError:
+    pdfium = None
+
+try:
+    from openai import OpenAI
+except ImportError:
+    OpenAI = None
 
 
 COMMON_ELEMENTS = {
@@ -445,17 +457,20 @@ def extract_jsw_shipping_rows(page_texts: list[str]) -> list[dict[str, str]]:
         spec_match = re.search(r"(ASTM[-\s]*A\s*\d+\s+GR\s*\d+)", page_text, flags=re.IGNORECASE)
         material_spec = spec_match.group(1).replace("ASTM-", "ASTM ").strip() if spec_match else ""
         for match in re.finditer(
-            r"\b(\d{7}A\d)\s+(S\d{5})\d+[A-Z]\s+\S+\s+\d+\s+\d+\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)",
+            r"\b(\d{7}A\d)\s+(S\d{5}\d+[A-Z])\s+\S+\s+\d+\s+\d+\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+([\d,]+(?:\.\d+)?)",
             page_text,
         ):
+            slab_id = match.group(2)
             rows.append(
                 {
                     "FULL_TAG_NUM": match.group(1),
-                    "Heat No": match.group(2),
+                    "Heat No": slab_id[:6],
+                    "Slab ID": slab_id,
                     "Material Spec": material_spec,
                     "Thick": match.group(3),
                     "Width": match.group(4),
                     "Length": match.group(5),
+                    "Net Wgt": match.group(6).replace(",", ""),
                 }
             )
     return rows
@@ -492,17 +507,25 @@ def build_jsw_digit_map(page, shipping_rows: list[dict[str, str]]) -> dict[str, 
     bottom_words = [
         word
         for word in words
-        if "(cid:" in str(word.get("text", "")) and 390 <= float(word.get("top", 0)) <= 410
+        if "(cid:" in str(word.get("text", "")) and 375 <= float(word.get("top", 0)) <= 410
     ]
 
-    known_values = ["1.2000", "50.000"]
+    known_values = ["1.2000", "50.000", "50.00"]
     for shipping in shipping_rows:
         if shipping.get("FULL_TAG_NUM"):
             known_values.append(str(shipping["FULL_TAG_NUM"]))
+        if shipping.get("Heat No"):
+            known_values.extend([str(shipping["Heat No"]), str(shipping["Heat No"]).replace("S", "")])
+        if shipping.get("Slab ID"):
+            known_values.extend([str(shipping["Slab ID"]), str(shipping["Slab ID"]).replace("S", "")])
         if shipping.get("Length"):
             length = parse_float(shipping["Length"])
             if length is not None:
                 known_values.extend([f"{length:.1f}", f"{length:.2f}"])
+        if shipping.get("Net Wgt"):
+            weight = parse_float(shipping["Net Wgt"])
+            if weight is not None:
+                known_values.extend([f"{weight:.0f}", f"{weight:.3f}"])
 
     for expected in known_values:
         expected = expected.strip()
@@ -630,6 +653,8 @@ def extract_jsw_page_records(page, digit_map: dict[str, str] | None = None) -> l
 
 
 def has_jsw_test_table(page) -> bool:
+    if float(getattr(page, "width", 0)) < float(getattr(page, "height", 0)):
+        return False
     words = page.extract_words(x_tolerance=1, y_tolerance=1, keep_blank_chars=False, use_text_flow=False)
     test_words = words_in_band(words, 280, 370, 10, 450)
     return len(test_words) >= 20
@@ -697,7 +722,11 @@ def extract_jsw_pdf_dataframe(uploaded_file, text: str) -> pd.DataFrame:
             if not has_jsw_test_table(page):
                 continue
             digit_map = build_jsw_digit_map(page, shipping_rows)
-            mtr_pages.extend(extract_jsw_page_records(page, digit_map))
+            page_records = extract_jsw_page_records(page, digit_map)
+            if page_records:
+                mtr_pages.extend(page_records)
+            else:
+                mtr_pages.append({})
 
     if not shipping_rows:
         return pd.DataFrame()
@@ -716,6 +745,8 @@ def extract_jsw_pdf_dataframe(uploaded_file, text: str) -> pd.DataFrame:
             record[mechanical] = page_values.get(mechanical, "")
         if not page_values:
             record["Extraction Note"] = "JSW PDF values could not be safely decoded; verify chemistry, mechanical, and Charpy values visually."
+        elif not all(page_values.get(key) for key in ["C", "Mn", "Yield", "Tensile", "Elongation"]):
+            record["Extraction Note"] = "JSW PDF extraction is partial; verify missing chemistry, mechanical, or Charpy values visually."
         rows.append(record)
 
     return clean_dataframe(pd.DataFrame(rows))
