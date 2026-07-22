@@ -365,8 +365,238 @@ def extract_sdi_mechanical_values(text: str) -> dict[str, str]:
     return values
 
 
+JSW_CID_MAP = {
+    "15": "A",
+    "22": "1",
+    "23": ".",
+    "24": "0",
+    "25": "5",
+    "26": "2",
+    "27": "4",
+    "28": "6",
+    "29": "7",
+    "30": "8",
+    "31": "3",
+}
+
+JSW_CHEMISTRY_ORDER = ["C", "Mn", "P", "S", "Si", "Cu", "Ni", "Cr", "Mo", "Sn", "Al", "N", "V", "B", "Ti", "Nb", "Ca", "CE"]
+
+
+def decode_jsw_word(value: object) -> str:
+    text = str(value or "")
+    text = re.sub(r"\(cid:(\d+)\)", lambda match: JSW_CID_MAP.get(match.group(1), ""), text)
+    return text.replace("%", " ").replace("K", "").strip()
+
+
+def jsw_numeric(value: object) -> str:
+    text = decode_jsw_word(value)
+    match = re.search(r"-?\d+(?:\.\d+)?", text)
+    return match.group(0) if match else ""
+
+
+def jsw_float(value: object) -> float | None:
+    number = parse_float(jsw_numeric(value))
+    return number
+
+
+def min_number(values: list[float]) -> str:
+    clean_values = [value for value in values if value is not None]
+    if not clean_values:
+        return ""
+    value = min(clean_values)
+    return f"{value:g}"
+
+
+def words_in_band(words: list[dict], top_min: float, top_max: float, x_min: float = 0, x_max: float = 9999) -> list[dict]:
+    return sorted(
+        [
+            word
+            for word in words
+            if top_min <= float(word["top"]) <= top_max and x_min <= float(word["x0"]) <= x_max
+        ],
+        key=lambda word: (float(word["top"]), float(word["x0"])),
+    )
+
+
+def jsw_values_by_x_band(words: list[dict], top_min: float, top_max: float, bands: dict[str, tuple[float, float]]) -> dict[str, str]:
+    values = {}
+    for label, (x_min, x_max) in bands.items():
+        band_words = words_in_band(words, top_min, top_max, x_min, x_max)
+        joined_value = "".join(decode_jsw_word(word["text"]) for word in band_words)
+        values[label] = jsw_numeric(joined_value)
+    return values
+
+
+def extract_jsw_shipping_rows(page_texts: list[str]) -> list[dict[str, str]]:
+    rows = []
+    for page_text in page_texts:
+        if "Bundle/" not in page_text or "Slab ID" not in page_text:
+            continue
+        spec_match = re.search(r"(ASTM[-\s]*A\s*\d+\s+GR\s*\d+)", page_text, flags=re.IGNORECASE)
+        material_spec = spec_match.group(1).replace("ASTM-", "ASTM ").strip() if spec_match else ""
+        for match in re.finditer(r"\b(\d{7}A\d)\s+(S\d{5})\d+[A-Z]\b", page_text):
+            rows.append(
+                {
+                    "FULL_TAG_NUM": match.group(1),
+                    "Heat No": match.group(2),
+                    "Material Spec": material_spec,
+                }
+            )
+    return rows
+
+
+def extract_jsw_page_values(page) -> dict[str, str]:
+    words = page.extract_words(x_tolerance=1, y_tolerance=1, keep_blank_chars=False, use_text_flow=False)
+    values = {}
+
+    # JSW reports include LADLE and PROD1 chemistry rows. Use PROD1 for reporting.
+    chemistry_bands = {
+        "C": (45, 65),
+        "Mn": (67, 86),
+        "P": (88, 109),
+        "S": (110, 131),
+        "Si": (133, 152),
+        "Cu": (154, 173),
+        "Ni": (176, 199),
+        "Cr": (200, 222),
+        "Mo": (222, 243),
+        "Sn": (243, 263),
+        "Al": (266, 288),
+        "N": (291, 312),
+        "V": (316, 337),
+        "B": (339, 364),
+        "Ti": (365, 386),
+        "Nb": (387, 409),
+        "Ca": (410, 435),
+    }
+    values.update(jsw_values_by_x_band(words, 252, 260, chemistry_bands))
+
+    mechanical_bands = {
+        "Yield": (225, 250),
+        "Tensile": (270, 300),
+        "Elongation": (305, 335),
+    }
+    mechanical_values = {key: [] for key in mechanical_bands}
+    for top_min, top_max in [(300, 307), (312, 319)]:
+        row_values = jsw_values_by_x_band(words, top_min, top_max, mechanical_bands)
+        for key, value in row_values.items():
+            parsed = parse_float(value)
+            if parsed is not None:
+                mechanical_values[key].append(parsed)
+    for key, found_values in mechanical_values.items():
+        values[key] = min_number(found_values)
+
+    charpy_bands = {
+        "Charpy Temp F": (198, 218),
+        "Charpy #1 FT-LB": (225, 250),
+        "Charpy #2 FT-LB": (254, 279),
+        "Charpy #3 FT-LB": (283, 308),
+        "Charpy Avg FT-LB": (312, 332),
+    }
+    charpy_values = {key: [] for key in charpy_bands}
+    for top_min, top_max in [(340, 348), (352, 358), (364, 370)]:
+        row_values = jsw_values_by_x_band(words, top_min, top_max, charpy_bands)
+        for key, value in row_values.items():
+            parsed = parse_float(value)
+            if parsed is not None:
+                charpy_values[key].append(parsed)
+    for key, found_values in charpy_values.items():
+        values[key] = min_number(found_values)
+
+    return values
+
+
+def has_jsw_test_table(page) -> bool:
+    words = page.extract_words(x_tolerance=1, y_tolerance=1, keep_blank_chars=False, use_text_flow=False)
+    test_words = words_in_band(words, 280, 370, 10, 450)
+    return len(test_words) >= 20
+
+
+def clean_jsw_page_values(values: dict[str, str]) -> dict[str, str]:
+    cleaned = values.copy()
+    ranges = {
+        "C": (0.01, 0.50),
+        "Mn": (0.10, 2.00),
+        "P": (0.0, 0.10),
+        "S": (0.0, 0.10),
+        "Yield": (20, 150),
+        "Tensile": (20, 150),
+        "Elongation": (1, 80),
+        "Charpy Temp F": (-100, 300),
+        "Charpy #1 FT-LB": (1, 500),
+        "Charpy #2 FT-LB": (1, 500),
+        "Charpy #3 FT-LB": (1, 500),
+        "Charpy Avg FT-LB": (1, 500),
+    }
+    for key, (minimum, maximum) in ranges.items():
+        value = parse_float(cleaned.get(key))
+        if value is None or value < minimum or value > maximum:
+            cleaned[key] = ""
+    if not cleaned.get("C"):
+        for element in ELEMENT_ORDER:
+            cleaned[element] = ""
+    if not all(cleaned.get(key) for key in ["Yield", "Tensile", "Elongation"]):
+        for key in ["Yield", "Tensile", "Elongation"]:
+            cleaned[key] = ""
+    if not all(cleaned.get(key) for key in ["Charpy #1 FT-LB", "Charpy #2 FT-LB", "Charpy #3 FT-LB", "Charpy Avg FT-LB"]):
+        for key in ["Charpy Temp F", "Charpy #1 FT-LB", "Charpy #2 FT-LB", "Charpy #3 FT-LB", "Charpy Avg FT-LB"]:
+            cleaned[key] = ""
+    else:
+        charpy_tests = [
+            parse_float(cleaned.get("Charpy #1 FT-LB")),
+            parse_float(cleaned.get("Charpy #2 FT-LB")),
+            parse_float(cleaned.get("Charpy #3 FT-LB")),
+        ]
+        charpy_avg = parse_float(cleaned.get("Charpy Avg FT-LB"))
+        if all(value is not None for value in charpy_tests):
+            calculated_avg = round(sum(charpy_tests) / len(charpy_tests))
+            if charpy_avg is None or charpy_avg < min(charpy_tests) - 5 or charpy_avg > max(charpy_tests) + 5:
+                cleaned["Charpy Avg FT-LB"] = f"{calculated_avg:g}"
+    return cleaned
+
+
+def extract_jsw_pdf_dataframe(uploaded_file, text: str) -> pd.DataFrame:
+    if pdfplumber is None or "JSW" not in text.upper():
+        return pd.DataFrame()
+
+    uploaded_file.seek(0)
+    rows = []
+    with pdfplumber.open(uploaded_file) as pdf:
+        page_texts = [page.extract_text(x_tolerance=1, y_tolerance=3) or "" for page in pdf.pages]
+        shipping_rows = extract_jsw_shipping_rows(page_texts)
+        mtr_pages = []
+        for page in pdf.pages:
+            page_values = clean_jsw_page_values(extract_jsw_page_values(page))
+            has_required_values = has_jsw_test_table(page) and any(page_values.get(element) for element in ["C", "Mn", "P"])
+            if has_required_values:
+                mtr_pages.append(page_values)
+
+    if not mtr_pages:
+        return pd.DataFrame()
+
+    for index, page_values in enumerate(mtr_pages):
+        shipping = shipping_rows[index] if index < len(shipping_rows) else {}
+        record = {
+            "BOL": Path(getattr(uploaded_file, "name", "JSW_PDF")).stem,
+            "FULL_TAG_NUM": shipping.get("FULL_TAG_NUM", ""),
+            "Heat No": shipping.get("Heat No", f"JSW_HEAT_{index + 1}"),
+            "Material Spec": shipping.get("Material Spec", "ASTM A252 GR 3"),
+        }
+        for element in ELEMENT_ORDER:
+            record[element] = page_values.get(element, "")
+        for mechanical in MECHANICAL_ORDER:
+            record[mechanical] = page_values.get(mechanical, "")
+        rows.append(record)
+
+    return clean_dataframe(pd.DataFrame(rows))
+
+
 def pdf_to_dataframe(uploaded_file, fallback_bol: str = "") -> tuple[pd.DataFrame, str]:
     text, tables = extract_pdf_content(uploaded_file)
+    jsw_df = extract_jsw_pdf_dataframe(uploaded_file, text)
+    if not jsw_df.empty:
+        return jsw_df, text
+
     record = {}
 
     bol = extract_value_from_text(text, PDF_FIELD_ALIASES["BOL"], numeric_only=False) or fallback_bol or "PDF"
@@ -500,7 +730,7 @@ def parse_float(value: object) -> float | None:
 
 def detect_standard_grade(text: object) -> tuple[str, str]:
     normalized = str(text or "")
-    standard_match = re.search(r"(?i)\bASTM\s*A\s*([0-9]+)", normalized)
+    standard_match = re.search(r"(?i)\bASTM[\s-]*A\s*([0-9]+)", normalized)
     grade_match = re.search(r"(?i)\b(?:GR|GRADE)\s*[-:/]?\s*([A-Z0-9]+)", normalized)
     class_match = re.search(r"(?i)\bCLASS\s*[-:/]?\s*([A-Z0-9]+)", normalized)
     type_match = re.search(r"(?i)\bTYPE\s*[-:/]?\s*([A-Z0-9]+)", normalized)
