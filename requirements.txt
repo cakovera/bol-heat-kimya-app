@@ -3,3 +3,6 @@ pandas
 openpyxl
 pdfplumber
 reportlab
+pypdfium2
+Pillow
+numpy
