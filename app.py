@@ -729,6 +729,10 @@ def get_openai_api_key(manual_key: str = "") -> str:
         return ""
 
 
+def is_plausible_openai_api_key(api_key: str) -> bool:
+    return api_key.startswith(("sk-", "sk-proj-"))
+
+
 def dataframe_has_partial_jsw_rows(df: pd.DataFrame) -> bool:
     if df.empty or "Extraction Note" not in df.columns:
         return False
@@ -787,39 +791,8 @@ def normalize_vision_records(data: object, source_name: str) -> pd.DataFrame:
     return clean_dataframe(pd.DataFrame(records))
 
 
-def extract_jsw_pdf_dataframe_with_vision(uploaded_file, text: str, api_key: str = "") -> pd.DataFrame:
-    if "JSW" not in text.upper():
-        return pd.DataFrame()
-    if pdfium is None:
-        VISION_WARNINGS.append("AI vision was not run because pypdfium2 is not installed.")
-        return pd.DataFrame()
-    if OpenAI is None:
-        VISION_WARNINGS.append("AI vision was not run because the openai package is not installed.")
-        return pd.DataFrame()
-
-    key = get_openai_api_key(api_key)
-    if not key:
-        VISION_WARNINGS.append("AI vision was not run because OPENAI_API_KEY was not found.")
-        return pd.DataFrame()
-
-    uploaded_file.seek(0)
-    pdf_bytes = uploaded_file.read()
-    uploaded_file.seek(0)
-
-    shipping_rows = extract_jsw_shipping_rows(text.split("\f") if "\f" in text else [text])
-    source_name = getattr(uploaded_file, "name", "JSW_PDF")
-    client = OpenAI(api_key=key)
-    model = os.getenv("OPENAI_VISION_MODEL", "gpt-5")
-    all_records = []
-
-    document = pdfium.PdfDocument(pdf_bytes)
-    for page_index in range(len(document)):
-        page = document[page_index]
-        if float(page.get_width()) < float(page.get_height()):
-            continue
-
-        data_url = render_pdf_page_data_url(page)
-        prompt = f"""
+def jsw_vision_prompt(shipping_rows: list[dict[str, str]]) -> str:
+    return f"""
 You are extracting values from a JSW Steel Metallurgical Test Report image.
 Return only valid JSON with this shape: {{"rows":[{{...}}]}}.
 Use the visible page image as the source of truth.
@@ -839,34 +812,127 @@ Extraction Note.
 Known shipping rows from readable pages:
 {json.dumps(shipping_rows, ensure_ascii=False)}
 """
-        try:
-            response = client.responses.create(
-                model=model,
-                input=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "input_text", "text": prompt},
-                            {"type": "input_image", "image_url": data_url, "detail": "high"},
-                        ],
-                    }
-                ],
-            )
-            page_data = parse_json_from_model_text(response.output_text)
-            page_df = normalize_vision_records(page_data, source_name)
-            if not page_df.empty:
-                all_records.extend(page_df.to_dict("records"))
-            else:
-                VISION_WARNINGS.append(f"AI vision returned no rows for {source_name}, page {page_index + 1}.")
-        except Exception as exc:
-            error_text = str(exc)
+
+
+@st.cache_data(show_spinner=False, ttl=86400)
+def extract_jsw_page_with_vision_cached(
+    pdf_bytes: bytes,
+    page_index: int,
+    source_name: str,
+    shipping_rows_json: str,
+    model: str,
+    api_key_tail: str,
+    _api_key: str,
+) -> tuple[list[dict], list[str]]:
+    warnings = []
+    document = pdfium.PdfDocument(pdf_bytes)
+    page = document[page_index]
+    data_url = render_pdf_page_data_url(page)
+    shipping_rows = json.loads(shipping_rows_json)
+    client = OpenAI(api_key=_api_key, timeout=75.0)
+
+    try:
+        response = client.responses.create(
+            model=model,
+            input=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "input_text", "text": jsw_vision_prompt(shipping_rows)},
+                        {"type": "input_image", "image_url": data_url, "detail": "high"},
+                    ],
+                }
+            ],
+            max_output_tokens=2500,
+        )
+        page_data = parse_json_from_model_text(response.output_text)
+        page_df = normalize_vision_records(page_data, source_name)
+        if page_df.empty:
+            warnings.append(f"AI vision returned no rows for {source_name}, page {page_index + 1}.")
+            return [], warnings
+        return page_df.to_dict("records"), warnings
+    except Exception as exc:
+        warnings.append(f"{exc}")
+        return [], warnings
+
+
+def extract_jsw_pdf_dataframe_with_vision(uploaded_file, text: str, api_key: str = "") -> pd.DataFrame:
+    if "JSW" not in text.upper():
+        return pd.DataFrame()
+    if pdfium is None:
+        VISION_WARNINGS.append("AI vision was not run because pypdfium2 is not installed.")
+        return pd.DataFrame()
+    if OpenAI is None:
+        VISION_WARNINGS.append("AI vision was not run because the openai package is not installed.")
+        return pd.DataFrame()
+
+    key = get_openai_api_key(api_key)
+    if not key:
+        VISION_WARNINGS.append("AI vision was not run because OPENAI_API_KEY was not found.")
+        return pd.DataFrame()
+    if not is_plausible_openai_api_key(key):
+        VISION_WARNINGS.append("AI vision was not run because the OpenAI API key format is invalid. Use the full key that starts with sk- or sk-proj-.")
+        return pd.DataFrame()
+
+    uploaded_file.seek(0)
+    pdf_bytes = uploaded_file.read()
+    uploaded_file.seek(0)
+
+    shipping_rows = extract_jsw_shipping_rows(text.split("\f") if "\f" in text else [text])
+    source_name = getattr(uploaded_file, "name", "JSW_PDF")
+    model = os.getenv("OPENAI_VISION_MODEL", "gpt-4.1-mini")
+    api_key_tail = key[-8:]
+    shipping_rows_json = json.dumps(shipping_rows, ensure_ascii=False, sort_keys=True)
+    all_records = []
+
+    document = pdfium.PdfDocument(pdf_bytes)
+    landscape_pages = [
+        page_index
+        for page_index in range(len(document))
+        if float(document[page_index].get_width()) >= float(document[page_index].get_height())
+    ]
+    progress = st.progress(0, text=f"AI vision reading {source_name}...")
+    for page_index in range(len(document)):
+        page = document[page_index]
+        if float(page.get_width()) < float(page.get_height()):
+            continue
+
+        current_position = landscape_pages.index(page_index) + 1
+        progress.progress(
+            current_position / max(len(landscape_pages), 1),
+            text=f"AI vision reading {source_name}, page {page_index + 1} ({current_position}/{len(landscape_pages)})...",
+        )
+        page_records, page_warnings = extract_jsw_page_with_vision_cached(
+            pdf_bytes,
+            page_index,
+            source_name,
+            shipping_rows_json,
+            model,
+            api_key_tail,
+            key,
+        )
+        all_records.extend(page_records)
+        for warning in page_warnings:
+            error_text = warning
+            if "invalid_api_key" in error_text or "Incorrect API key" in error_text:
+                VISION_WARNINGS.append(
+                    "AI vision stopped because the OpenAI API key is invalid. "
+                    "Create a new key in OpenAI Platform and paste the full key that starts with sk- or sk-proj-."
+                )
+                progress.empty()
+                break
             if "insufficient_quota" in error_text or "exceeded your current quota" in error_text:
                 VISION_WARNINGS.append(
                     "AI vision stopped because the OpenAI API account has no available quota. "
                     "Add billing/credits in OpenAI Platform, then run the extraction again."
                 )
+                progress.empty()
                 break
-            VISION_WARNINGS.append(f"AI vision failed for {source_name}, page {page_index + 1}: {exc}")
+            VISION_WARNINGS.append(f"AI vision failed for {source_name}, page {page_index + 1}: {warning}")
+        else:
+            continue
+        break
+    progress.empty()
 
     return clean_dataframe(pd.DataFrame(all_records))
 
@@ -1782,7 +1848,7 @@ if pdf_files:
                 placeholder="sk-...",
                 help="Used only for AI vision extraction. Leave blank when OPENAI_API_KEY is set.",
             )
-            st.caption(f"Vision model: {os.getenv('OPENAI_VISION_MODEL', 'gpt-5')}")
+            st.caption(f"Vision model: {os.getenv('OPENAI_VISION_MODEL', 'gpt-4.1-mini')}")
 
 if is_pdf:
     sheet_name = "PDF Batch" if len(pdf_files) > 1 else "PDF"
